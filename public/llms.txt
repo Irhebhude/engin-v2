@@ -1,0 +1,27 @@
+# SEARCH-POI
+
+> Independent AI-powered search engine by POI Foundation. Real-time fintech analytics, market intelligence, business verification, and deep research — instant AI answers, not just links. African-first focus (SMEs, Nigeria).
+
+SEARCH-POI Engine v1 combines AI reasoning, traditional web results, live commodity/FX/crypto data, and POI-Trust business verification. Built on free public endpoints and open-source tooling.
+
+## Pages
+
+- [Home](/): AI search bar, trending topics, fintech dashboard.
+- [Search](/search): Web, image, video, and news results with AI answers.
+- [Insights](/insights): Programmatic SEO articles from popular queries.
+- [Pricing](/pricing): Free, Pro, and Business plans.
+- [About](/about): Project background and mission.
+- [Contact](/contact): Email, phone, WhatsApp, and contact form.
+- [Feedback](/feedback): Submit feedback with instant AI response.
+- [Referral](/referral): Unique referral links and milestone unlocks.
+- [Policies](/policies): Privacy, AI usage, and data governance.
+- [Rights](/rights): User rights and data ownership.
+
+## Optional
+
+- [Auth](/auth): Sign in / sign up.
+- [Waitlist](/waitlist): Early access lead capture.
+- [Premium](/premium): Premium features overview.
+- [Business Dashboard](/business): Merchant verification and analytics.
+- [Developer API](/developer): API keys, usage stats, and playground.
+- [POI Points](/points): Gamified verification rewards.
