@@ -245,8 +245,12 @@ const Header = () => {
       </div>
 
       {/* Tools menu dropdown — opened by floating button (all screens) */}
-      {mobileOpen && (
+        {mobileOpen && (
         <div ref={menuPanelRef} className="fixed bottom-24 left-5 w-[calc(100vw-2.5rem)] sm:w-80 max-h-[70vh] overflow-y-auto glass border border-border/40 rounded-xl shadow-2xl px-4 py-3 flex flex-col gap-3 text-sm z-[55]">
+          <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-primary font-semibold hover:text-primary/80 transition-colors">
+            <Home className="w-4 h-4" /> Back Home
+          </Link>
+
           {NAV_LINKS.map((l) => (
             <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">{l.label}</Link>
           ))}
