@@ -87,7 +87,22 @@ const POLICIES = [
 const Policies = () => {
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title="Privacy & Policies — SEARCH-POI" description="Read SEARCH-POI's privacy policy, terms of service, and data governance. Your privacy is our priority." path="/policies" />
+      <SEOHead
+        title="Privacy & Policies — SEARCH-POI"
+        description="Read SEARCH-POI's privacy policy, terms of service, and data governance. Your privacy is our priority."
+        path="/policies"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: POLICIES.flatMap((p) =>
+            p.sections.map((s) => ({
+              "@type": "Question",
+              name: `${p.title} — ${s.heading}`,
+              acceptedAnswer: { "@type": "Answer", text: s.content },
+            }))
+          ),
+        }}
+      />
       <Header />
 
       <main className="relative z-10 pt-28 pb-20 px-4">

@@ -31,7 +31,22 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://search-poi.lovable.app/trending</loc>
+    <loc>https://search-poi.lovable.app/pricing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://search-poi.lovable.app/rights</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://search-poi.lovable.app/auth</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://search-poi.lovable.app/insights</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>

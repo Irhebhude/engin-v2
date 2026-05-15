@@ -65,7 +65,28 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title="Contact SEARCH-POI — Get In Touch" description="Contact the SEARCH-POI team for feedback, partnerships, or support. We'd love to hear from you." path="/contact" />
+      <SEOHead
+        title="Contact SEARCH-POI — Get In Touch"
+        description="Contact the SEARCH-POI team for feedback, partnerships, or support. We'd love to hear from you."
+        path="/contact"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: "SEARCH-POI by POI Foundation",
+          url: "https://search-poi.lovable.app/",
+          email: "infosearchpoi@gmail.com",
+          telephone: "+2348114472622",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Lagos",
+            addressCountry: "NG",
+          },
+          contactPoint: [
+            { "@type": "ContactPoint", contactType: "customer support", email: "infosearchpoi@gmail.com", telephone: "+2348114472622", areaServed: "NG" },
+            { "@type": "ContactPoint", contactType: "sales", email: "businesssearchpoi@gmail.com", areaServed: "NG" },
+          ],
+        }}
+      />
       <Header />
       <main className="pt-20 pb-16 px-4">
         <div className="container mx-auto max-w-4xl">
