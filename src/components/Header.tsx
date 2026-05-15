@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Clock, Menu, X, Gift, LogOut, User, Shield, Star, Trophy, Code, Trash2, Copy, Brain, GraduationCap, TrendingUp, Globe, FileText, Sparkles, Image as ImageIcon, Cpu, Video, Newspaper, ScrollText, Hammer, MapPin } from "lucide-react";
+import { Clock, Menu, X, Gift, LogOut, User, Shield, Star, Trophy, Code, Trash2, Copy, Brain, GraduationCap, TrendingUp, Globe, FileText, Sparkles, Image as ImageIcon, Cpu, Video, Newspaper, ScrollText, Hammer, MapPin, Home } from "lucide-react";
 import SearchHistory from "@/components/SearchHistory";
 import { clearSearchHistory } from "@/lib/search-context";
 import { useToast } from "@/hooks/use-toast";
