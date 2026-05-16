@@ -244,110 +244,6 @@ const Header = () => {
 
       </div>
 
-      {/* Tools menu dropdown — opened by floating button (all screens) */}
-        {mobileOpen && (
-        <div ref={menuPanelRef} className="fixed bottom-24 left-5 w-[calc(100vw-2.5rem)] sm:w-80 max-h-[70vh] overflow-y-auto glass border border-border/40 rounded-xl shadow-2xl px-4 py-3 flex flex-col gap-3 text-sm z-[55]">
-          <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-primary font-semibold hover:text-primary/80 transition-colors">
-            <Home className="w-4 h-4" /> Back Home
-          </Link>
-
-          {NAV_LINKS.map((l) => (
-            <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">{l.label}</Link>
-          ))}
-
-          {/* Tools list */}
-          <div className="border-t border-border/30 pt-3 flex flex-col gap-3">
-            {TOOL_GROUPS.map((group) => (
-              <div key={group.category} className="flex flex-col gap-1">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {group.category}
-                </div>
-                {group.items.map((tool) => {
-                  const Icon = tool.icon;
-                  return (
-                    <Link
-                      key={tool.id}
-                      to={tool.to}
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/20 transition-colors text-foreground/90"
-                    >
-                      <div className="p-1 rounded bg-primary/10">
-                        <Icon className="w-3.5 h-3.5 text-primary" />
-                      </div>
-                      <span className="text-xs">{tool.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          <Link to="/referral" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-primary font-medium">
-            <Gift className="w-4 h-4" /> Refer & Earn
-          </Link>
-          <Link to="/developer" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium">
-            <Code className="w-4 h-4" /> Developer API
-          </Link>
-          {user?.email === ADMIN_EMAIL && (
-            <>
-              <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-destructive font-medium">
-                <Shield className="w-4 h-4" /> Admin Dashboard
-              </Link>
-              <Link to="/admin/acquisition-control" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-[hsl(45,90%,55%)] font-medium">
-                <Star className="w-4 h-4" /> Acquisition Control
-              </Link>
-            </>
-          )}
-          {user && (
-            <div className="flex items-center gap-2">
-              <LiteModeToggle enabled={profile?.lite_mode ?? false} onToggle={() => toggleLiteMode()} />
-              {profile && profile.poi_points > 0 && <POIPointsBadge points={profile.poi_points} />}
-            </div>
-          )}
-          {profile?.referral_code && (
-            <button
-              onClick={() => { copyReferralCode(); setMobileOpen(false); }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-primary text-sm font-medium"
-            >
-              <Gift className="w-4 h-4" />
-              Your Code: <span className="font-mono">{profile.referral_code}</span>
-              <Copy className="w-3 h-3 ml-auto opacity-70" />
-            </button>
-          )}
-          <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => { setMobileOpen(false); setShowHistory(!showHistory); }}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Clock className="w-4 h-4" /> History
-            </button>
-            <button
-              onClick={() => { handleClearHistory(); setMobileOpen(false); }}
-              className="flex items-center gap-1.5 text-destructive/80 hover:text-destructive text-xs"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Clear
-            </button>
-          </div>
-          {user ? (
-            <>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <User className="w-4 h-4" />
-                <span>{profile?.display_name || user.email}</span>
-                {profile?.is_premium && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-[hsl(45,90%,50%)]/15 text-[hsl(45,90%,55%)] text-[9px] font-bold uppercase">PRO</span>
-                )}
-              </div>
-              <button onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
-                <LogOut className="w-4 h-4" /> Sign Out
-              </button>
-            </>
-          ) : (
-            <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-primary font-medium">
-              Sign In / Sign Up
-            </Link>
-          )}
-        </div>
-      )}
 
       {/* Global search history popover (desktop + mobile) */}
       {showHistory && (
@@ -368,6 +264,7 @@ const Header = () => {
     <button
       ref={menuButtonRef}
       onClick={(e) => { e.stopPropagation(); setMobileOpen((v) => !v); }}
+      onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       aria-label="Toggle menu"
@@ -376,6 +273,110 @@ const Header = () => {
     >
       {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
     </button>
+
+    {/* Tools menu dropdown — opened by floating button (all screens) */}
+    {mobileOpen && (
+      <div ref={menuPanelRef} className="fixed bottom-24 left-5 w-[calc(100vw-2.5rem)] sm:w-80 max-h-[70vh] overflow-y-auto glass border border-border/40 rounded-xl shadow-2xl px-4 py-3 flex flex-col gap-3 text-sm z-[55]">
+        <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-primary font-semibold hover:text-primary/80 transition-colors">
+          <Home className="w-4 h-4" /> Back Home
+        </Link>
+
+        {NAV_LINKS.map((l) => (
+          <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">{l.label}</Link>
+        ))}
+
+        <div className="border-t border-border/30 pt-3 flex flex-col gap-3">
+          {TOOL_GROUPS.map((group) => (
+            <div key={group.category} className="flex flex-col gap-1">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {group.category}
+              </div>
+              {group.items.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.id}
+                    to={tool.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent/20 transition-colors text-foreground/90"
+                  >
+                    <div className="p-1 rounded bg-primary/10">
+                      <Icon className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="text-xs">{tool.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        <Link to="/referral" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-primary font-medium">
+          <Gift className="w-4 h-4" /> Refer & Earn
+        </Link>
+        <Link to="/developer" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium">
+          <Code className="w-4 h-4" /> Developer API
+        </Link>
+        {user?.email === ADMIN_EMAIL && (
+          <>
+            <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-destructive font-medium">
+              <Shield className="w-4 h-4" /> Admin Dashboard
+            </Link>
+            <Link to="/admin/acquisition-control" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-[hsl(45,90%,55%)] font-medium">
+              <Star className="w-4 h-4" /> Acquisition Control
+            </Link>
+          </>
+        )}
+        {user && (
+          <div className="flex items-center gap-2">
+            <LiteModeToggle enabled={profile?.lite_mode ?? false} onToggle={() => toggleLiteMode()} />
+            {profile && profile.poi_points > 0 && <POIPointsBadge points={profile.poi_points} />}
+          </div>
+        )}
+        {profile?.referral_code && (
+          <button
+            onClick={() => { copyReferralCode(); setMobileOpen(false); }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 text-primary text-sm font-medium"
+          >
+            <Gift className="w-4 h-4" />
+            Your Code: <span className="font-mono">{profile.referral_code}</span>
+            <Copy className="w-3 h-3 ml-auto opacity-70" />
+          </button>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => { setMobileOpen(false); setShowHistory(!showHistory); }}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Clock className="w-4 h-4" /> History
+          </button>
+          <button
+            onClick={() => { handleClearHistory(); setMobileOpen(false); }}
+            className="flex items-center gap-1.5 text-destructive/80 hover:text-destructive text-xs"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Clear
+          </button>
+        </div>
+        {user ? (
+          <>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <User className="w-4 h-4" />
+              <span>{profile?.display_name || user.email}</span>
+              {profile?.is_premium && (
+                <span className="px-1.5 py-0.5 rounded-full bg-[hsl(45,90%,50%)]/15 text-[hsl(45,90%,55%)] text-[9px] font-bold uppercase">PRO</span>
+              )}
+            </div>
+            <button onClick={() => { setMobileOpen(false); signOut(); }} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          </>
+        ) : (
+          <Link to="/auth" onClick={() => setMobileOpen(false)} className="text-primary font-medium">
+            Sign In / Sign Up
+          </Link>
+        )}
+      </div>
+    )}
     </>
   );
 };
