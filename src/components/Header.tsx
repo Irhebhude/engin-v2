@@ -368,6 +368,7 @@ const Header = () => {
     <button
       ref={menuButtonRef}
       onClick={(e) => { e.stopPropagation(); setMobileOpen((v) => !v); }}
+      onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       aria-label="Toggle menu"
