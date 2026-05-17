@@ -2,7 +2,7 @@
 
 > Independent AI-powered search engine by POI Foundation. Real-time fintech analytics, market intelligence, business verification, and deep research — instant AI answers, not just links. African-first focus (SMEs, Nigeria).
 
-SEARCH-POI Engine v1 combines AI reasoning, traditional web results, live commodity/FX/crypto data, and POI-Trust business verification. Built on free public endpoints and open-source tooling.
+SEARCH-POI Engine v2 combines AI reasoning, traditional web results, live commodity/FX/crypto data, and POI-Trust business verification. Built on free public endpoints and open-source tooling.
 
 ## Pages
 

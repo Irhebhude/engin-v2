@@ -14,7 +14,7 @@ describe("Truth Engine — Ownership trigger detection", () => {
   const ownershipQueries = [
     "Who owns SEARCH-POI?",
     "Can Prosper sell it?",
-    "Does POI Foundation have the right to sell SEARCH-POI Engine v1?",
+    "Does POI Foundation have the right to sell SEARCH-POI Engine v2?",
     "Who built it?",
     "Is Google the owner?",
     "Is Lovable the owner of this engine?",
@@ -93,7 +93,7 @@ describe("Truth Engine — Anti-hallucination of third-party ownership", () => {
 
   it("does NOT flag clean answers", () => {
     const clean =
-      "SEARCH-POI Engine v1 is owned by Prosper Ozoya Irhebhude and the POI Foundation.";
+      "SEARCH-POI Engine v2 is owned by Prosper Ozoya Irhebhude and the POI Foundation.";
     const { violations } = filterHallucinations(clean);
     expect(violations).toHaveLength(0);
   });

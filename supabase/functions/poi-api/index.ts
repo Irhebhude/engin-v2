@@ -127,7 +127,7 @@ Be factual, concise, and business-oriented.`;
       meta: {
         model_used: model,
         credits_remaining: keyRecord.credits_remaining - 1,
-        powered_by: "SEARCH-POI Engine v1",
+        powered_by: "SEARCH-POI Engine v2",
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

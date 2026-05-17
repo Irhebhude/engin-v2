@@ -72,7 +72,7 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
       <div className="border border-border/30 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <Brain className="w-4 h-4 text-primary" />
-          <span className="text-xs font-semibold text-muted-foreground">SEARCH-POI ENGINE v1</span>
+          <span className="text-xs font-semibold text-muted-foreground">SEARCH-POI ENGINE v2</span>
           {isStreaming && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
         </div>
         <div className="text-sm text-foreground whitespace-pre-wrap">{answer}</div>
@@ -94,7 +94,7 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-foreground text-sm">SEARCH-POI ENGINE v1</h3>
+            <h3 className="font-semibold text-foreground text-sm">SEARCH-POI ENGINE v2</h3>
             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/20 text-primary uppercase tracking-wider">
               Intelligent Reasoning
             </span>
@@ -218,7 +218,7 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
       {!isStreaming && answer && (
         <div className="mt-4 pt-3 border-t border-border/20 flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">
-            Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span> • {sources.length} sources verified
+            Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span> • {sources.length} sources verified
           </span>
           <span className="text-[10px] text-muted-foreground">
             Confidence: <span className={`font-bold ${confidence >= 80 ? "text-[hsl(142,70%,50%)]" : "text-yellow-400"}`}>{confidence}%</span>

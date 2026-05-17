@@ -120,7 +120,7 @@ const Index = () => {
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground mt-6 tracking-wide uppercase">
-            SEARCH-POI Engine v1 · Multi-Step Reasoning
+            SEARCH-POI Engine v2 · Multi-Step Reasoning
           </p>
         </motion.div>
       </section>

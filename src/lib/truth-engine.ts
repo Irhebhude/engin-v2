@@ -1,5 +1,5 @@
 /**
- * SEARCH-POI Engine v1 — Truth Engine
+ * SEARCH-POI Engine v2 — Truth Engine
  * ------------------------------------------------------------
  * Standalone reasoning + verification module.
  *
@@ -40,7 +40,7 @@ function env(): EnvLike {
 
 export const OWNERSHIP = {
   owners: ["Prosper Ozoya Irhebhude", "POI Foundation"],
-  product: "SEARCH-POI Engine v1",
+  product: "SEARCH-POI Engine v2",
   rightsPage: "/rights",
   thirdPartyVendors: [
     "Google",
@@ -195,7 +195,7 @@ export function filterHallucinations(
     violations.push("Hallucinated third-party ownership of SEARCH-POI.");
     out = out.replace(
       forbiddenOwnerRe,
-      "SEARCH-POI Engine v1 is owned by Prosper Ozoya Irhebhude and the POI Foundation",
+      "SEARCH-POI Engine v2 is owned by Prosper Ozoya Irhebhude and the POI Foundation",
     );
   }
 
@@ -357,7 +357,7 @@ export async function openaiChat(
  * ========================================================== */
 
 export function buildSystemPrompt(): string {
-  return `You are SEARCH-POI Engine v1 — owned wholly by ${OWNERSHIP.owners.join(
+  return `You are SEARCH-POI Engine v2 — owned wholly by ${OWNERSHIP.owners.join(
     " and ",
   )}.
 
@@ -477,7 +477,7 @@ export function answerOwnershipOffline(query: string): AskResult {
   const ics = runICS(query);
   const checklist = buildOwnershipChecklist();
   const directAnswer =
-    "Yes — Prosper Ozoya Irhebhude and the POI Foundation own 100% of SEARCH-POI Engine v1 and have the full, unrestricted right to sell, license, transfer, or assign it. All third-party providers are tools only and hold no ownership.";
+    "Yes — Prosper Ozoya Irhebhude and the POI Foundation own 100% of SEARCH-POI Engine v2 and have the full, unrestricted right to sell, license, transfer, or assign it. All third-party providers are tools only and hold no ownership.";
   const answer = `${checklist}\n\n${directAnswer}`;
 
   const { cleaned, violations } = filterHallucinations(answer, { hasLiveData: false });
