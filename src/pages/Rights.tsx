@@ -108,12 +108,30 @@ const Rights = () => {
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   const handleDownloadPdf = () => {
-    const html = buildOwnershipStatementHTML();
-    const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    try {
+      const html = buildOwnershipStatementHTML();
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      // Try to open in a new tab so the auto-print script can run.
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+
+      if (!w) {
+        // Popup blocked — fall back to a direct download of the HTML file.
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "SEARCH-POI-Ownership-Statement.html";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      // Release the blob URL after the new tab/download has had time to grab it.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      console.error("[Rights] Failed to generate ownership statement:", err);
+      alert("Could not generate the ownership statement. Please try again.");
+    }
   };
 
   // checklist preview text (kept verbatim with truth-engine.ts)
