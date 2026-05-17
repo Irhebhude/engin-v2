@@ -101,17 +101,21 @@ const DeveloperDashboard = () => {
         .maybeSingle();
 
       if (!existingProfile) {
-        // Refresh session — server-side trigger should have created it
-        await supabase.auth.refreshSession();
-        const { data: retry } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!retry) {
+        // Self-heal: create a minimal profile row so the FK insert below succeeds
+        const { error: profileErr } = await supabase.from("profiles").insert({
+          id: user.id,
+          display_name:
+            (user.user_metadata as any)?.display_name ||
+            (user.user_metadata as any)?.full_name ||
+            user.email?.split("@")[0] ||
+            "User",
+          email_verified: !!user.email_confirmed_at,
+        });
+        if (profileErr && !profileErr.message?.includes("duplicate")) {
+          console.error("Profile create failed:", profileErr);
           toast({
-            title: "Profile not ready",
-            description: "Please sign out and sign back in once, then try again.",
+            title: "Profile setup failed",
+            description: profileErr.message,
             variant: "destructive",
           });
           return;
