@@ -79,7 +79,7 @@ const Insights = () => {
             Business Intelligence & <span className="text-primary">Market Insights</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            AI-generated analysis for African business decisions. Every insight is powered by SEARCH-POI Engine v1.
+            AI-generated analysis for African business decisions. Every insight is powered by SEARCH-POI Engine v2.
           </p>
         </motion.div>
 
@@ -154,7 +154,7 @@ const Insights = () => {
         )}
 
         <div className="text-center mt-16 text-xs text-muted-foreground">
-          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span> • AI Business Intelligence for Africa
+          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span> • AI Business Intelligence for Africa
         </div>
       </main>
     </div>

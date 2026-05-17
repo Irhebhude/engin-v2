@@ -23,7 +23,7 @@ const buildOwnershipStatementHTML = () => {
     .map((l) => `<li>${l}</li>`)
     .join("");
   return `<!doctype html><html><head><meta charset="utf-8"/>
-<title>SEARCH-POI Engine v1 — Official Ownership Statement</title>
+<title>SEARCH-POI Engine v2 — Official Ownership Statement</title>
 <style>
   @page { size: A4; margin: 24mm; }
   body { font-family: Georgia, 'Times New Roman', serif; color: #111; line-height: 1.55; }
@@ -37,11 +37,11 @@ const buildOwnershipStatementHTML = () => {
   .sig-line { border-top: 1px solid #111; width: 280px; margin-top: 40px; padding-top: 4px; font-size: 12px; }
   @media print { .noprint { display: none; } }
 </style></head><body>
-<h1>SEARCH-POI Engine v1 — Official Ownership Statement</h1>
+<h1>SEARCH-POI Engine v2 — Official Ownership Statement</h1>
 <div class="meta">Issued ${today} · Reference: /rights · For buyers, partners and licensees</div>
 
 <h2>1. Sole Owner</h2>
-<p>SEARCH-POI Engine v1 was conceived, designed, founded, and is wholly owned by:</p>
+<p>SEARCH-POI Engine v2 was conceived, designed, founded, and is wholly owned by:</p>
 <ul>
   <li><b>Prosper Ozoya Irhebhude</b> — Founder &amp; Architect</li>
   <li><b>POI Foundation</b> — Holding Entity</li>
@@ -52,7 +52,7 @@ right to license, transfer or sell is held exclusively by the above parties.</p>
 
 <h2>2. Rights Granted to the Owner</h2>
 <ul>
-  <li>Full and unrestricted right to <b>SELL</b> SEARCH-POI Engine v1 to any party</li>
+  <li>Full and unrestricted right to <b>SELL</b> SEARCH-POI Engine v2 to any party</li>
   <li>Full and unrestricted right to <b>LICENSE</b> the engine, brand or any component</li>
   <li>Full and unrestricted right to <b>TRANSFER</b> or <b>ASSIGN</b> ownership</li>
   <li>Full and unrestricted right to <b>MODIFY</b>, <b>FORK</b> or <b>REBRAND</b> the system</li>
@@ -62,7 +62,7 @@ right to license, transfer or sell is held exclusively by the above parties.</p>
 
 <h2>3. Third-Party Providers — Tools Only</h2>
 <p>The following providers supply infrastructure and APIs used by SEARCH-POI as
-tools. They <b>do NOT own</b> any part of SEARCH-POI Engine v1, its IP, its brand,
+tools. They <b>do NOT own</b> any part of SEARCH-POI Engine v2, its IP, its brand,
 or any rights to sell or transfer it. They are vendors — interchangeable at the
 owner's discretion.</p>
 <ul>
@@ -87,7 +87,7 @@ owner's discretion.</p>
 </ol>
 
 <div class="seal">
-  THIS DOCUMENT CONFIRMS — Prosper Ozoya Irhebhude &amp; POI Foundation are the sole owners of SEARCH-POI Engine v1<br/>
+  THIS DOCUMENT CONFIRMS — Prosper Ozoya Irhebhude &amp; POI Foundation are the sole owners of SEARCH-POI Engine v2<br/>
   with full right to sell, license, transfer or assign.
   <div class="small">Generated from /rights · ${today}</div>
 </div>
@@ -121,8 +121,8 @@ const Rights = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
-        title="Rights & Ownership — SEARCH-POI Engine v1"
-        description="Official ownership statement for SEARCH-POI Engine v1. Wholly owned by Prosper Ozoya Irhebhude and the POI Foundation. Third-party providers are tools, not rights holders."
+        title="Rights & Ownership — SEARCH-POI Engine v2"
+        description="Official ownership statement for SEARCH-POI Engine v2. Wholly owned by Prosper Ozoya Irhebhude and the POI Foundation. Third-party providers are tools, not rights holders."
       />
       <Header />
 
@@ -139,7 +139,7 @@ const Rights = () => {
             Rights & <span className="text-primary">Ownership</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Legal clarity on who owns SEARCH-POI Engine v1, who has the right to sell or
+            Legal clarity on who owns SEARCH-POI Engine v2, who has the right to sell or
             transfer it, and the role of third-party infrastructure providers.
           </p>
 
@@ -165,7 +165,7 @@ const Rights = () => {
             <div>
               <h2 className="text-2xl font-bold mb-2">Sole Owner & Founder</h2>
               <p className="text-muted-foreground mb-4">
-                SEARCH-POI Engine v1 was conceived, designed, founded, and is wholly owned by:
+                SEARCH-POI Engine v2 was conceived, designed, founded, and is wholly owned by:
               </p>
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ const Rights = () => {
           </div>
           <ul className="space-y-3">
             {[
-              "Full and unrestricted right to SELL SEARCH-POI Engine v1 to any party",
+              "Full and unrestricted right to SELL SEARCH-POI Engine v2 to any party",
               "Full and unrestricted right to LICENSE the engine, brand, or any component",
               "Full and unrestricted right to TRANSFER or ASSIGN ownership",
               "Full and unrestricted right to MODIFY, FORK, or REBRAND the system",
@@ -221,7 +221,7 @@ const Rights = () => {
           <p className="text-muted-foreground mb-6">
             The following providers supply infrastructure and APIs that SEARCH-POI uses as
             tools. They <span className="text-foreground font-semibold">do NOT own</span>{" "}
-            any part of SEARCH-POI Engine v1, its IP, its brand, or any rights to sell or
+            any part of SEARCH-POI Engine v2, its IP, its brand, or any rights to sell or
             transfer it. They are vendors — interchangeable at the owner's discretion.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
@@ -251,7 +251,7 @@ const Rights = () => {
         <section className="rounded-2xl border border-primary/30 bg-primary/5 p-8 mb-8">
           <h2 className="text-xl font-bold mb-3">Engine Verification</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            When asked about ownership, SEARCH-POI Engine v1 runs an internal Ownership
+            When asked about ownership, SEARCH-POI Engine v2 runs an internal Ownership
             Verification Checklist before answering. The engine is required to confirm:
           </p>
           <ol className="space-y-2 text-sm">

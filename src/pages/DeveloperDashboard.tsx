@@ -357,7 +357,7 @@ const DeveloperDashboard = () => {
                     sources_used: ["AI reasoning", "Knowledge base"],
                     mode: "business",
                   },
-                  meta: { credits_remaining: 99, powered_by: "SEARCH-POI Engine v1" },
+                  meta: { credits_remaining: 99, powered_by: "SEARCH-POI Engine v2" },
                 }, null, 2)}</pre>
               </div>
 
@@ -477,7 +477,7 @@ print(response.json()["data"]["answer"])`}</pre>
         </motion.div>
 
         <div className="text-center mt-12 text-xs text-muted-foreground">
-          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span>
+          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span>
         </div>
       </main>
     </div>

@@ -354,7 +354,7 @@ const SearchResults = () => {
         {!liteMode && <AdSense adSlot="9944378861" adFormat="auto" className="mt-8" />}
 
         <div className="text-center mt-12 text-xs text-muted-foreground">
-          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span> • Intelligent Reasoning • POI Foundation
+          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span> • Intelligent Reasoning • POI Foundation
         </div>
       </main>
 

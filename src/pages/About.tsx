@@ -37,7 +37,7 @@ const fadeUp = {
 const About = () => (
   <div className="min-h-screen bg-background">
     <SEOHead
-      title="About POI Foundation — Owners of SEARCH-POI Engine v1"
+      title="About POI Foundation — Owners of SEARCH-POI Engine v2"
       description="SEARCH-POI is built and owned by POI Foundation — an independent AI intelligence engine. Not Google. Not Microsoft. African-first."
       path="/about"
     />
@@ -134,12 +134,12 @@ const About = () => (
           <h3 className="text-xl font-bold text-foreground mb-1">Prosper Ozoya Irhebhude</h3>
           <p className="text-primary font-medium text-sm mb-3">Founder, POI Foundation</p>
           <p className="text-muted-foreground text-sm max-w-lg mx-auto leading-relaxed">
-            SEARCH-POI Engine v1 was founded and is owned by Prosper Ozoya Irhebhude under POI Foundation — an independent organization with no corporate parent.
+            SEARCH-POI Engine v2 was founded and is owned by Prosper Ozoya Irhebhude under POI Foundation — an independent organization with no corporate parent.
           </p>
         </motion.section>
 
         <div className="text-center text-xs text-muted-foreground">
-          <p>SEARCH-POI Engine v1 · An independent product of <span className="text-primary font-semibold">POI Foundation</span></p>
+          <p>SEARCH-POI Engine v2 · An independent product of <span className="text-primary font-semibold">POI Foundation</span></p>
         </div>
       </div>
     </main>

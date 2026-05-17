@@ -13,7 +13,7 @@ const ELITE_FOOTER = `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 🏷️ Asset Status: Pre-Revenue Asset (Newly Built)
-📌 SEARCH-POI ENGINE v1 Acquisition Proposal
+📌 SEARCH-POI ENGINE v2 Acquisition Proposal
 💰 Asking Price: $12.5M USD (Negotiable)
 📞 Phone: +2348114472622
 💬 WhatsApp: +2348162719737
@@ -43,7 +43,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an elite social media copywriter for SEARCH-POI ENGINE v1, the world's first Intelligent Reasoning Search Engine.
+            content: `You are an elite social media copywriter for SEARCH-POI ENGINE v2, the world's first Intelligent Reasoning Search Engine.
 Your goal: Create viral, attention-grabbing posts that attract Nigerian companies, international investors, and tech acquirers.
 Rules:
 - Write 1 compelling post (150-250 words)
@@ -58,7 +58,7 @@ Rules:
           },
           {
             role: "user",
-            content: `Generate a unique elite social media post for SEARCH-POI ENGINE v1 acquisition campaign. Theme: ${
+            content: `Generate a unique elite social media post for SEARCH-POI ENGINE v2 acquisition campaign. Theme: ${
               ["AI Revolution in Africa", "The Future of Search", "Investment Opportunity", "Tech Disruption", "Market Intelligence", "Next Google from Africa"][Math.floor(Math.random() * 6)]
             }. Make it different from typical posts.`,
           },
@@ -70,7 +70,7 @@ Rules:
 
       if (!response.ok) throw new Error("AI generation failed");
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "SEARCH-POI ENGINE v1 — The Future of Intelligent Search";
+      const content = data.choices?.[0]?.message?.content || "SEARCH-POI ENGINE v2 — The Future of Intelligent Search";
 
       // Return content WITH footer for preview
       return new Response(JSON.stringify({ content: content + ELITE_FOOTER }), {

@@ -284,7 +284,7 @@ const FintechDashboard = () => {
       {/* Engine branding */}
       <div className="mt-3 pt-2 border-t border-border/20 text-center">
         <span className="text-[10px] text-muted-foreground">
-          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span> • Real-time Intelligence Layer
+          Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span> • Real-time Intelligence Layer
         </span>
       </div>
     </div>

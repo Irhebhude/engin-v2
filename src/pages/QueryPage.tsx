@@ -56,7 +56,7 @@ const QueryPage = () => {
     "@type": "Article",
     headline: `${query} — SEARCH-POI Intelligence`,
     description: answer.slice(0, 160),
-    author: { "@type": "Organization", name: "SEARCH-POI Engine v1" },
+    author: { "@type": "Organization", name: "SEARCH-POI Engine v2" },
     publisher: { "@type": "Organization", name: "POI Foundation" },
     datePublished: new Date().toISOString(),
     mainEntityOfPage: { "@type": "WebPage", "@id": `https://search-poi.lovable.app/q/${slug}` },
@@ -99,7 +99,7 @@ const QueryPage = () => {
               </div>
               <div className="flex-1">
                 <h1 className="font-bold text-lg text-foreground">{query}</h1>
-                <p className="text-xs text-muted-foreground">SEARCH-POI Engine v1 • ICS Reasoning • Public Intelligence Page</p>
+                <p className="text-xs text-muted-foreground">SEARCH-POI Engine v2 • ICS Reasoning • Public Intelligence Page</p>
               </div>
             </div>
 
@@ -161,7 +161,7 @@ const QueryPage = () => {
             )}
 
             <div className="mt-4 pt-3 border-t border-border/20 text-[10px] text-muted-foreground flex items-center justify-between">
-              <span>Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v1</span> • POI Foundation</span>
+              <span>Powered by <span className="text-primary font-semibold">SEARCH-POI Engine v2</span> • POI Foundation</span>
               <span>Generated {new Date().toLocaleDateString()}</span>
             </div>
           </motion.div>
