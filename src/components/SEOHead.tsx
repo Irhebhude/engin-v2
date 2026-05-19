@@ -10,7 +10,7 @@ interface SEOHeadProps {
   jsonLd?: Record<string, any>;
 }
 
-const BASE_URL = "https://search-poi.lovable.app";
+const BASE_URL = "https://engin-v2.searchpoi.workers.dev";
 
 const SEOHead = ({ title, description, path = "", keywords, type = "website", image, jsonLd }: SEOHeadProps) => {
   useEffect(() => {

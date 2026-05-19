@@ -51,7 +51,7 @@ const Insights = () => {
     "@type": "Blog",
     name: "SEARCH-POI Insights",
     description: "AI-powered business intelligence, market analysis, and actionable insights for African entrepreneurs and investors.",
-    url: "https://search-poi.lovable.app/insights",
+    url: "https://engin-v2.searchpoi.workers.dev/insights",
     publisher: {
       "@type": "Organization",
       name: "POI Foundation",
