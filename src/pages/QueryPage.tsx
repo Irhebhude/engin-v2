@@ -59,7 +59,7 @@ const QueryPage = () => {
     author: { "@type": "Organization", name: "SEARCH-POI Engine v2" },
     publisher: { "@type": "Organization", name: "POI Foundation" },
     datePublished: new Date().toISOString(),
-    mainEntityOfPage: { "@type": "WebPage", "@id": `https://search-poi.lovable.app/q/${slug}` },
+    mainEntityOfPage: { "@type": "WebPage", "@id": `https://engin-v2.searchpoi.workers.dev/q/${slug}` },
   };
 
   const faqLd = {

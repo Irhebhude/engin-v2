@@ -36,7 +36,7 @@ const FINTECH_JSON_LD = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "SEARCH-POI",
-  url: "https://search-poi.lovable.app/",
+  url: "https://engin-v2.searchpoi.workers.dev/",
   description: "AI-powered intelligence ecosystem for search, fintech analytics, market analysis, and business verification.",
   applicationCategory: "SearchApplication",
   operatingSystem: "Web",
@@ -44,7 +44,7 @@ const FINTECH_JSON_LD = {
   creator: { "@type": "Organization", name: "POI Foundation" },
   potentialAction: {
     "@type": "SearchAction",
-    target: { "@type": "EntryPoint", urlTemplate: "https://search-poi.lovable.app/search?q={search_term_string}" },
+    target: { "@type": "EntryPoint", urlTemplate: "https://engin-v2.searchpoi.workers.dev/search?q={search_term_string}" },
     "query-input": "required name=search_term_string",
   },
 };

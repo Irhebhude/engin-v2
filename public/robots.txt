@@ -15,4 +15,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://search-poi.lovable.app/sitemap.xml
+Sitemap: https://engin-v2.searchpoi.workers.dev/sitemap.xml

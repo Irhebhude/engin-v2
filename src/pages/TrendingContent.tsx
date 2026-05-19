@@ -80,13 +80,13 @@ const TrendingContentPage = () => {
     "@type": "Article",
     headline: content.title,
     description: content.description,
-    url: `https://search-poi.lovable.app/trending/${content.slug}`,
+    url: `https://engin-v2.searchpoi.workers.dev/trending/${content.slug}`,
     datePublished: content.created_at,
     author: { "@type": "Organization", name: "SEARCH-POI" },
     publisher: {
       "@type": "Organization",
       name: "SEARCH-POI",
-      url: "https://search-poi.lovable.app",
+      url: "https://engin-v2.searchpoi.workers.dev",
     },
     keywords: content.keywords.join(", "),
   };

@@ -73,7 +73,7 @@ const Contact = () => {
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
           name: "SEARCH-POI by POI Foundation",
-          url: "https://search-poi.lovable.app/",
+          url: "https://engin-v2.searchpoi.workers.dev/",
           email: "infosearchpoi@gmail.com",
           telephone: "+2348114472622",
           address: {

@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const USER_AGENT = "SEARCH-POI-Bot/1.0 (+https://search-poi.lovable.app; POI Foundation independent crawler)";
+const USER_AGENT = "SEARCH-POI-Bot/1.0 (+https://engin-v2.searchpoi.workers.dev; POI Foundation independent crawler)";
 
 function getDomain(url: string): string {
   try { return new URL(url).hostname.toLowerCase(); } catch { return ""; }
