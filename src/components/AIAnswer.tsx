@@ -215,6 +215,13 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
       {/* ICS Reasoning Chain */}
       {!isStreaming && answer && <ICSReasoningPanel query={query} answer={answer} confidence={confidence} sources={sources} />}
 
+      {/* Batch 1 Intelligence Modules */}
+      {!isStreaming && answer && <ReasoningTransparencyPanel query={query} answer={answer} sources={sources} />}
+      {!isStreaming && answer && <SecondOrderEffectsPanel query={query} answer={answer} />}
+      {!isStreaming && answer && <CausalChainGraph query={query} answer={answer} />}
+      {!isStreaming && answer && <DecisionEnginePanel query={query} answer={answer} sources={sources} />}
+      {!isStreaming && answer && <DebateModePanel query={query} answer={answer} />}
+
       {/* Trust & Safety Panel */}
       {!isStreaming && answer && <TrustSafetyPanel sources={sources} answer={answer} />}
 
