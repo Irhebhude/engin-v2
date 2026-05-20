@@ -91,11 +91,14 @@ const SearchResults = () => {
       const start = performance.now();
       let accumulated = "";
 
-      addSearchToHistory(q, searchMode);
-      const recentContext = getRecentQueries(5);
+      const zkOn = typeof window !== "undefined" && localStorage.getItem("zk_search_enabled") === "1";
+      if (!zkOn) addSearchToHistory(q, searchMode);
+      const recentContext = zkOn ? [] : getRecentQueries(5);
 
-      supabase.rpc("increment_search_count" as any).then(() => {});
-      supabase.rpc("log_search_activity" as any, { search_query: q, search_mode: searchMode }).then(() => {});
+      if (!zkOn) {
+        supabase.rpc("increment_search_count" as any).then(() => {});
+        supabase.rpc("log_search_activity" as any, { search_query: q, search_mode: searchMode }).then(() => {});
+      }
 
       const aiPromise = (async () => {
         try {

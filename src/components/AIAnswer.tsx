@@ -9,6 +9,12 @@ import TrustSafetyPanel from "@/components/TrustSafetyPanel";
 import EngineDifferentiation from "@/components/EngineDifferentiation";
 import ICSReasoningPanel from "@/components/ICSReasoningPanel";
 import OptimizationPanel from "@/components/OptimizationPanel";
+import ReasoningTransparencyPanel from "@/components/intelligence/ReasoningTransparencyPanel";
+import SecondOrderEffectsPanel from "@/components/intelligence/SecondOrderEffectsPanel";
+import CausalChainGraph from "@/components/intelligence/CausalChainGraph";
+import DecisionEnginePanel from "@/components/intelligence/DecisionEnginePanel";
+import DebateModePanel from "@/components/intelligence/DebateModePanel";
+import ZKSearchToggle from "@/components/intelligence/ZKSearchToggle";
 
 interface AIAnswerProps {
   answer: string;
@@ -108,7 +114,8 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
               Reasoning...
             </span>
           ) : answer ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ZKSearchToggle />
               <SmartShareButton query={query} answer={answer} sources={sources.map(s => ({ url: s.url, title: s.title, domain: s.domain }))} />
               <SaveToVaultButton query={query} answer={answer} sources={sources} />
               <ShareButtons text={answer} query={query} />
@@ -207,6 +214,13 @@ const AIAnswer = ({ answer, isStreaming, query, sources = [], liteMode }: AIAnsw
 
       {/* ICS Reasoning Chain */}
       {!isStreaming && answer && <ICSReasoningPanel query={query} answer={answer} confidence={confidence} sources={sources} />}
+
+      {/* Batch 1 Intelligence Modules */}
+      {!isStreaming && answer && <ReasoningTransparencyPanel query={query} answer={answer} sources={sources} />}
+      {!isStreaming && answer && <SecondOrderEffectsPanel query={query} answer={answer} />}
+      {!isStreaming && answer && <CausalChainGraph query={query} answer={answer} />}
+      {!isStreaming && answer && <DecisionEnginePanel query={query} answer={answer} sources={sources} />}
+      {!isStreaming && answer && <DebateModePanel query={query} answer={answer} />}
 
       {/* Trust & Safety Panel */}
       {!isStreaming && answer && <TrustSafetyPanel sources={sources} answer={answer} />}
