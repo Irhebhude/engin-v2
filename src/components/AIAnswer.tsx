@@ -9,6 +9,12 @@ import TrustSafetyPanel from "@/components/TrustSafetyPanel";
 import EngineDifferentiation from "@/components/EngineDifferentiation";
 import ICSReasoningPanel from "@/components/ICSReasoningPanel";
 import OptimizationPanel from "@/components/OptimizationPanel";
+import ReasoningTransparencyPanel from "@/components/intelligence/ReasoningTransparencyPanel";
+import SecondOrderEffectsPanel from "@/components/intelligence/SecondOrderEffectsPanel";
+import CausalChainGraph from "@/components/intelligence/CausalChainGraph";
+import DecisionEnginePanel from "@/components/intelligence/DecisionEnginePanel";
+import DebateModePanel from "@/components/intelligence/DebateModePanel";
+import ZKSearchToggle from "@/components/intelligence/ZKSearchToggle";
 
 interface AIAnswerProps {
   answer: string;
