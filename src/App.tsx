@@ -82,6 +82,7 @@ const App = () => (
             <Route path="/feedback" element={<ReferralGate><Feedback /></ReferralGate>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DeviceLockGate>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
