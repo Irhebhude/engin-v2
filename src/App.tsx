@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ReferralGate from "@/components/ReferralGate";
 import OfflineStatusBar from "@/components/OfflineStatusBar";
+import DeviceLockGate from "@/components/security/DeviceLockGate";
+import SecuritySettings from "./pages/SecuritySettings";
 
 // Direct imports for instant loading
 import Index from "./pages/Index";
@@ -51,8 +53,9 @@ const App = () => (
         <Sonner />
         <OfflineStatusBar />
         <BrowserRouter>
+          <DeviceLockGate>
           <Routes>
-            {/* Public routes */}
+            <Route path="/security" element={<SecuritySettings />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/referral" element={<Referral />} />
             <Route path="/admin" element={<AdminDashboard />} />
@@ -79,6 +82,7 @@ const App = () => (
             <Route path="/feedback" element={<ReferralGate><Feedback /></ReferralGate>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DeviceLockGate>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
