@@ -53,8 +53,9 @@ const App = () => (
         <Sonner />
         <OfflineStatusBar />
         <BrowserRouter>
+          <DeviceLockGate>
           <Routes>
-            {/* Public routes */}
+            <Route path="/security" element={<SecuritySettings />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/referral" element={<Referral />} />
             <Route path="/admin" element={<AdminDashboard />} />
