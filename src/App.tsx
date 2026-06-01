@@ -8,6 +8,8 @@ import ReferralGate from "@/components/ReferralGate";
 import OfflineStatusBar from "@/components/OfflineStatusBar";
 import DeviceLockGate from "@/components/security/DeviceLockGate";
 import SecuritySettings from "./pages/SecuritySettings";
+import LiveSources from "./pages/LiveSources";
+import LiveTicker from "@/components/live/LiveTicker";
 
 // Direct imports for instant loading
 import Index from "./pages/Index";
@@ -52,10 +54,12 @@ const App = () => (
         <Toaster />
         <Sonner />
         <OfflineStatusBar />
+        <LiveTicker />
         <BrowserRouter>
           <DeviceLockGate>
           <Routes>
             <Route path="/security" element={<SecuritySettings />} />
+            <Route path="/live-sources" element={<LiveSources />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/referral" element={<Referral />} />
             <Route path="/admin" element={<AdminDashboard />} />
