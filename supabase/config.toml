@@ -1,1 +1,10 @@
 project_id = "qzqzgsupfvcjckzkrpta"
+
+[functions.nexus-orchestrate]
+verify_jwt = false
+
+[functions.nexus-intel-feed]
+verify_jwt = false
+
+[functions.nexus-simulate]
+verify_jwt = false
