@@ -132,7 +132,7 @@ export default function LockScreen({ onUnlock }: Props) {
             </motion.div>
             <p className="text-foreground text-sm">Place finger to unlock</p>
           </button>
-        ) : (
+        ) : mode === "passcode" ? (
           <>
             <div className="flex gap-4 mb-10">
               {[0, 1, 2, 3].map((i) => (
@@ -153,6 +153,87 @@ export default function LockScreen({ onUnlock }: Props) {
               onDelete={() => setCode(code.slice(0, -1))}
             />
           </>
+        ) : mode === "recover" ? (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError(null);
+              setRecBusy(true);
+              try {
+                const { error: err } = await supabase.auth.signInWithPassword({ email: recEmail, password: recPass });
+                if (err) { setError("Email or account password incorrect"); return; }
+                setMode("newpass");
+              } finally { setRecBusy(false); }
+            }}
+            className="w-full space-y-3"
+          >
+            <p className="text-xs text-muted-foreground text-center mb-2">
+              Re-authenticate with your account password to reset your passcode.
+            </p>
+            <input
+              type="email"
+              required
+              placeholder="Account email"
+              value={recEmail}
+              onChange={(e) => setRecEmail(e.target.value)}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            <input
+              type="password"
+              required
+              placeholder="Account password"
+              value={recPass}
+              onChange={(e) => setRecPass(e.target.value)}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            <button
+              type="submit"
+              disabled={recBusy}
+              className="w-full h-11 rounded-lg bg-[#00D4FF] text-[#0A0F1E] font-semibold text-sm disabled:opacity-50"
+            >
+              {recBusy ? "Verifying…" : "Verify & Reset Passcode"}
+            </button>
+          </form>
+        ) : (
+          // newpass — set a fresh 4-digit code
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError(null);
+              if (!/^\d{4}$/.test(newCode)) { setError("Must be 4 digits"); return; }
+              if (newCode !== confirmCode) { setError("Passcodes do not match"); return; }
+              clearPasscode();
+              await setPasscode(newCode);
+              markUnlocked();
+              onUnlock();
+            }}
+            className="w-full space-y-3"
+          >
+            <p className="text-xs text-muted-foreground text-center mb-2">Set a new 4-digit passcode.</p>
+            <input
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              required
+              placeholder="New 4-digit passcode"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value.replace(/\D/g, ""))}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-center tracking-[0.6em] text-lg text-foreground focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            <input
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              required
+              placeholder="Confirm"
+              value={confirmCode}
+              onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, ""))}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-center tracking-[0.6em] text-lg text-foreground focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            <button type="submit" className="w-full h-11 rounded-lg bg-[#00D4FF] text-[#0A0F1E] font-semibold text-sm">
+              Save & Unlock
+            </button>
+          </form>
         )}
 
         <AnimatePresence>
@@ -169,21 +250,25 @@ export default function LockScreen({ onUnlock }: Props) {
         </AnimatePresence>
       </motion.div>
 
-      <div className="text-center min-h-[24px]">
+      <div className="text-center min-h-[24px] space-y-2">
         {mode === "biometric" && hasPasscode() && (
-          <button
-            onClick={() => setMode("passcode")}
-            className="text-xs text-[#00D4FF] hover:underline"
-          >
+          <button onClick={() => setMode("passcode")} className="block mx-auto text-xs text-[#00D4FF] hover:underline">
             Use 4-digit passcode instead
           </button>
         )}
         {mode === "passcode" && hasBiometric() && (
-          <button
-            onClick={() => setMode("biometric")}
-            className="text-xs text-[#00D4FF] hover:underline"
-          >
+          <button onClick={() => setMode("biometric")} className="block mx-auto text-xs text-[#00D4FF] hover:underline">
             Use fingerprint instead
+          </button>
+        )}
+        {mode === "passcode" && (
+          <button onClick={() => { setMode("recover"); setError(null); }} className="block mx-auto text-xs text-muted-foreground hover:text-[#00D4FF] inline-flex items-center gap-1">
+            <KeyRound className="w-3 h-3" /> Forgot passcode?
+          </button>
+        )}
+        {(mode === "recover" || mode === "newpass") && (
+          <button onClick={() => { setMode("passcode"); setError(null); setCode(""); }} className="block mx-auto text-xs text-muted-foreground hover:text-[#00D4FF] inline-flex items-center gap-1">
+            <ArrowLeft className="w-3 h-3" /> Back to passcode
           </button>
         )}
       </div>
