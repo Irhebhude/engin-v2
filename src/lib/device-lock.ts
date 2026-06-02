@@ -113,6 +113,14 @@ export function hasPasscode(): boolean {
   return !!localStorage.getItem(K.passHash);
 }
 
+export function clearPasscode(): void {
+  localStorage.removeItem(K.passHash);
+  if (hasBiometric()) localStorage.setItem(K.method, "biometric");
+  else localStorage.removeItem(K.method);
+  localStorage.setItem(K.fails, "0");
+  localStorage.removeItem(K.lockoutUntil);
+}
+
 // ---------- Biometric (WebAuthn) ----------
 function b64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))

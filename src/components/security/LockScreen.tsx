@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fingerprint, Delete, Shield } from "lucide-react";
+import { Fingerprint, Delete, Shield, KeyRound, ArrowLeft } from "lucide-react";
 import {
   verifyPasscode,
   verifyBiometric,
@@ -8,7 +8,11 @@ import {
   hasBiometric,
   hasPasscode,
   isLockedOut,
+  clearPasscode,
+  setPasscode,
+  markUnlocked,
 } from "@/lib/device-lock";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   onUnlock: () => void;
@@ -16,13 +20,18 @@ interface Props {
 
 export default function LockScreen({ onUnlock }: Props) {
   const initial = getMethod();
-  const [mode, setMode] = useState<"biometric" | "passcode">(
+  const [mode, setMode] = useState<"biometric" | "passcode" | "recover" | "newpass">(
     initial === "biometric" && hasBiometric() ? "biometric" : "passcode"
   );
   const [code, setCode] = useState("");
   const [shake, setShake] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lockoutMs, setLockoutMs] = useState(0);
+  const [recEmail, setRecEmail] = useState("");
+  const [recPass, setRecPass] = useState("");
+  const [recBusy, setRecBusy] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [confirmCode, setConfirmCode] = useState("");
 
   useEffect(() => {
     const tick = () => {
