@@ -429,6 +429,111 @@ export type Database = {
           },
         ]
       }
+      nexus_agent_outputs: {
+        Row: {
+          agent_name: string
+          created_at: string
+          id: string
+          mission_id: string
+          output: string
+          user_id: string
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          id?: string
+          mission_id: string
+          output: string
+          user_id: string
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          id?: string
+          mission_id?: string
+          output?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexus_intel_feed: {
+        Row: {
+          anomaly: boolean
+          content: string
+          created_at: string
+          domain: string
+          id: string
+          title: string
+        }
+        Insert: {
+          anomaly?: boolean
+          content: string
+          created_at?: string
+          domain: string
+          id?: string
+          title: string
+        }
+        Update: {
+          anomaly?: boolean
+          content?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      nexus_memory: {
+        Row: {
+          confidence: number
+          created_at: string
+          domain: string
+          id: string
+          insight: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          domain?: string
+          id?: string
+          insight: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          domain?: string
+          id?: string
+          insight?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexus_missions: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       poi_points_log: {
         Row: {
           created_at: string
