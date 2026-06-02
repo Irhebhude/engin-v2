@@ -35,6 +35,7 @@ import Pricing from "./pages/Pricing";
 import Insights from "./pages/Insights";
 import QueryPage from "./pages/QueryPage";
 import Rights from "./pages/Rights";
+import NexusCore from "./pages/NexusCore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ const App = () => (
           <DeviceLockGate>
           <Routes>
             <Route path="/security" element={<SecuritySettings />} />
+            <Route path="/nexus" element={<NexusCore />} />
             <Route path="/live-sources" element={<LiveSources />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/referral" element={<Referral />} />
