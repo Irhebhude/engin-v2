@@ -327,6 +327,20 @@ const Header = () => {
           ))}
         </div>
 
+        <Link
+          to="/nexus"
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-1.5 font-bold tracking-wider px-3 py-2 rounded-lg"
+          style={{
+            background: "linear-gradient(135deg, rgba(0,255,231,0.15), rgba(0,255,231,0.05))",
+            border: "1px solid rgba(0,255,231,0.5)",
+            color: "#00FFE7",
+            fontFamily: "'Orbitron', sans-serif",
+            fontSize: "12px",
+          }}
+        >
+          ⬡ NEXUS CORE
+        </Link>
         <Link to="/referral" onClick={() => setMobileOpen(false)} className="flex items-center gap-1.5 text-primary font-medium">
           <Gift className="w-4 h-4" /> Refer & Earn
         </Link>
