@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { to: "/pricing", label: "Pricing" },
   { to: "/insights", label: "Insights" },
   { to: "/contact", label: "Contact" },
+  { to: "/security", label: "Security" },
 ];
 
 const TOOL_GROUPS: { category: string; items: { id: string; label: string; icon: any; to: string }[] }[] = [
@@ -132,6 +133,21 @@ const Header = () => {
           {NAV_LINKS.map((l) => (
             <Link key={l.to} to={l.to} className="text-muted-foreground hover:text-foreground transition-colors">{l.label}</Link>
           ))}
+
+          <Link
+            to="/nexus"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold tracking-wider transition-all hover:scale-105"
+            style={{
+              background: "linear-gradient(135deg, rgba(0,255,231,0.15), rgba(0,255,231,0.05))",
+              border: "1px solid rgba(0,255,231,0.5)",
+              color: "#00FFE7",
+              boxShadow: "0 0 12px rgba(0,255,231,0.3)",
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: "11px",
+            }}
+          >
+            ⬡ NEXUS CORE
+          </Link>
 
           <Link
             to="/referral"
