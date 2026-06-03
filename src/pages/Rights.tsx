@@ -76,10 +76,8 @@ owner's discretion.</p>
 <ul>
   <li>Google (Gemini API) — AI model provider — no ownership</li>
   <li>OpenAI (GPT API) — AI model provider — no ownership</li>
-  <li>Lovable — Development &amp; hosting platform — no ownership</li>
-  <li>Supabase — Database &amp; backend infrastructure — no ownership</li>
+  <li>Cloudflare (Pages, Workers, D1, R2, KV) — hosting &amp; edge infrastructure — no ownership</li>
   <li>Firecrawl — Web scraping API — no ownership</li>
-  <li>Cloudflare — CDN &amp; edge network (optional) — no ownership</li>
 </ul>
 
 <h2>4. Ownership Verification Checklist</h2>
