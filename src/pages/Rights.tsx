@@ -27,7 +27,10 @@ const buildOwnershipStatementHTML = () => {
 <style>
   @page { size: A4; margin: 24mm; }
   body { font-family: Georgia, 'Times New Roman', serif; color: #111; line-height: 1.55; }
-  h1 { font-size: 24px; margin: 0 0 4px; }
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  .header img { width: 72px; height: 72px; object-fit: contain; border: 1px solid #111; border-radius: 8px; flex-shrink: 0; }
+  .header-text { flex: 1; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
   h2 { font-size: 16px; margin: 22px 0 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
   .meta { color: #555; font-size: 12px; margin-bottom: 18px; }
   ul { padding-left: 20px; }
@@ -37,8 +40,13 @@ const buildOwnershipStatementHTML = () => {
   .sig-line { border-top: 1px solid #111; width: 280px; margin-top: 40px; padding-top: 4px; font-size: 12px; }
   @media print { .noprint { display: none; } }
 </style></head><body>
-<h1>SEARCH-POI Engine v2 — Official Ownership Statement</h1>
-<div class="meta">Issued ${today} · Reference: /rights · For buyers, partners and licensees</div>
+<div class="header">
+  <img src="${window.location.origin}/search-poi-logo.jpg" alt="SEARCH-POI Engine v2 logo" />
+  <div class="header-text">
+    <h1>SEARCH-POI Engine v2 — Official Ownership Statement</h1>
+    <div class="meta">Issued ${today} · Reference: /rights · For buyers, partners and licensees</div>
+  </div>
+</div>
 
 <h2>1. Sole Owner</h2>
 <p>SEARCH-POI Engine v2 was conceived, designed, founded, and is wholly owned by:</p>
