@@ -1,8 +1,30 @@
 {
-  "name": "engin-v2",
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "search-poi-engine-v2",
   "compatibility_date": "2026-05-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
+  },
+  // ─────────────────────────────────────────────────────────
+  // Cloudflare bindings (uncomment + fill after `wrangler d1/r2/kv create`)
+  // ─────────────────────────────────────────────────────────
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "search-poi", "database_id": "<d1-id>" }
+  // ],
+  // "r2_buckets": [
+  //   { "binding": "STORAGE", "bucket_name": "search-poi-storage" }
+  // ],
+  // "kv_namespaces": [
+  //   { "binding": "CACHE", "id": "<kv-id>" }
+  // ],
+  "vars": {
+    "APP_ENV": "production"
   }
+  // Secrets (set via `wrangler pages secret put <NAME>`):
+  //   JWT_SECRET, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
+  //   LOVABLE_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY direct), FIRECRAWL_API_KEY,
+  //   NASA_API_KEY, AYRSHARE_API_KEY, TURNSTILE_SECRET_KEY
 }
