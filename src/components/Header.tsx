@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const ADMIN_EMAIL = "prosperozoya50@gmail.com";
 
 const NAV_LINKS = [
+  { to: "/pages", label: "◉ All Pages" },
   { to: "/about", label: "About" },
   { to: "/pricing", label: "Pricing" },
   { to: "/insights", label: "Insights" },
