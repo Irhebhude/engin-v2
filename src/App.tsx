@@ -36,6 +36,7 @@ import Insights from "./pages/Insights";
 import QueryPage from "./pages/QueryPage";
 import Rights from "./pages/Rights";
 import NexusCore from "./pages/NexusCore";
+import PagesDirectory from "./pages/PagesDirectory";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,7 @@ const App = () => (
           <DeviceLockGate>
           <Routes>
             <Route path="/security" element={<SecuritySettings />} />
+            <Route path="/pages" element={<PagesDirectory />} />
             <Route path="/nexus" element={<NexusCore />} />
             <Route path="/live-sources" element={<LiveSources />} />
             <Route path="/auth" element={<Auth />} />

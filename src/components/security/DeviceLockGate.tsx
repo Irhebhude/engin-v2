@@ -45,13 +45,21 @@ export default function DeviceLockGate({ children }: Props) {
     setReady(true);
 
     const onVisibility = () => {
-      // Re-lock when tab regains focus after 24h
-      if (document.visibilityState === "visible" && getMethod() && !isSessionFresh()) {
+      // Re-lock whenever the user comes back to the tab
+      if (document.visibilityState === "visible" && getMethod()) {
         setLocked(true);
       }
     };
+    const onPageHide = () => {
+      // Clear fresh marker so reopening re-prompts
+      if (getMethod()) localStorage.removeItem("spv2_unlocked_at");
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+    };
   }, []);
 
   if (!ready) return null;
