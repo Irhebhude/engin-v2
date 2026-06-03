@@ -15,7 +15,7 @@ const K = {
   setupSkipped: "spv2_lock_skipped", // dev escape hatch only
 };
 
-const SESSION_MS = 24 * 60 * 60 * 1000;
+const SESSION_MS = 0; // Re-prompt passcode on every return / reload
 const LOCKOUT_MS = 30 * 60 * 1000;
 const MAX_FAILS = 5;
 
@@ -78,6 +78,7 @@ export function markUnlocked() {
 }
 
 export function isSessionFresh(): boolean {
+  if (SESSION_MS <= 0) return false;
   const t = Number(localStorage.getItem(K.unlockedAt) || 0);
   return t > 0 && Date.now() - t < SESSION_MS;
 }
