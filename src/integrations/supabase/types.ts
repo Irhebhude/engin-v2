@@ -59,6 +59,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       api_usage_log: {
@@ -172,6 +179,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -427,6 +441,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "knowledge_vaults_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       nexus_agent_outputs: {
@@ -564,6 +585,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "poi_points_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       poi_task_completions: {
@@ -604,6 +632,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poi_task_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -698,6 +733,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       referral_rewards: {
@@ -731,6 +773,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -769,10 +818,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "public_referral_codes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "referrals_referrer_id_fkey"
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -841,6 +904,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_referral_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -937,7 +1007,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_referral_codes: {
+        Row: {
+          display_name: string | null
+          id: string | null
+          referral_code: string | null
+        }
+        Insert: {
+          display_name?: string | null
+          id?: string | null
+          referral_code?: string | null
+        }
+        Update: {
+          display_name?: string | null
+          id?: string | null
+          referral_code?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       award_poi_points: {
@@ -982,6 +1069,13 @@ export type Database = {
       log_search_activity: {
         Args: { search_mode?: string; search_query: string }
         Returns: undefined
+      }
+      lookup_referrer_by_code: {
+        Args: { code: string }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
       }
       process_referral: {
         Args: { referral_code_input: string }
