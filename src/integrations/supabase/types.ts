@@ -1025,27 +1025,6 @@ export type Database = {
         }
         Relationships: []
       }
-      search_activity_public: {
-        Row: {
-          created_at: string | null
-          id: string | null
-          query: string | null
-          search_mode: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-          query?: string | null
-          search_mode?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-          query?: string | null
-          search_mode?: string | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
       award_poi_points: {
