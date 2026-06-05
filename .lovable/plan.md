@@ -8,37 +8,48 @@ Status legend: ✅ shipped · 🟡 in progress · ⬜ pending
 - `wrangler.jsonc` rewritten for Pages + future D1/R2/KV bindings
 - `functions/api/health.ts` first Pages Function (healthcheck)
 - `CLOUDFLARE_MIGRATION.md` env + secret contract
-- App still runs on Supabase. Nothing broken.
 
 ## B2 — D1 schema port ✅
-- `cloudflare/d1/migrations/0001_core_schema.sql` — every public table ported to SQLite (uuid→TEXT, timestamptz→INTEGER ms, jsonb→TEXT, arrays→JSON, RLS removed)
-- `cloudflare/d1/migrations/0002_fts.sql` — FTS5 virtual table + sync triggers replacing the `tsvector` index
-- `cloudflare/d1/migrations/0003_updated_at_triggers.sql` — per-table `updated_at` maintenance
-- `cloudflare/d1/README.md` — provisioning commands + map of every Postgres `SECURITY DEFINER` function to its Worker replacement (B3/B4/B5)
+- 3 migrations under `cloudflare/d1/migrations/` (core schema, FTS5, updated_at triggers)
 - Local `users` + `sessions` tables added (replace `auth.users` ahead of B3)
 
-## B3 — Auth Worker ⬜
-`functions/api/auth/*` — email+password (PBKDF2 via WebCrypto) + Google OAuth. JWT (HS256) in httpOnly Secure cookie, refresh rotation. Replaces `@supabase/supabase-js` auth.
+## B3 — Auth Worker ✅
+`functions/_shared/auth.ts` — PBKDF2 (WebCrypto), HS256 JWT, httpOnly cookies, D1 refresh sessions.
+- `POST /api/auth/signup` — creates user + profile, sets access + refresh cookies
+- `POST /api/auth/login` — verifies password, rotates session
+- `POST /api/auth/refresh` — rotates refresh token, issues new access JWT
+- `POST /api/auth/logout` — clears cookies + revokes session row
+- `GET  /api/auth/me` — returns current user + profile
+- `GET  /api/auth/google/start` → Google OAuth consent
+- `GET  /api/auth/google/callback` — exchanges code, upserts user, sets cookies
+Required secrets (set via `wrangler pages secret put`):
+  `JWT_SECRET`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`.
 
-## B4 — Data API Worker ⬜
-`functions/api/data/*` — one endpoint per current `supabase.from(...)` call site, typed via generated `src/integrations/cf/types.ts`. RPC endpoints replace each SECURITY DEFINER function listed in `cloudflare/d1/README.md`.
+## B4 — Data API Worker ✅ (initial surface)
+Pattern in place under `functions/api/data/*`; each endpoint = one D1 table, auth-gated.
+Shipped:
+- `GET/PATCH /api/data/profiles`
+- `GET/POST  /api/data/search-history`
+- `POST      /api/data/waitlist`  (public)
+- `POST      /api/data/feedback`
+Remaining tables (vaults, business listings, POI points, referrals, etc.) follow the same `functions/api/data/<name>.ts` template — added incrementally as the React client migrates calls off `@/integrations/supabase/client`.
 
-## B5 — Edge Functions port ⬜
-Every `supabase/functions/*/index.ts` re-implemented as `functions/api/*.ts` Pages Function.
+## B5 — Edge Functions port ✅ (first wave)
+- `functions/_shared/ai.ts` — Lovable AI Gateway helper (drop-in swap target for direct OpenAI/Gemini in B6).
+- `POST /api/search-ai` ← supabase/functions/search-ai
+- `POST /api/web-search` ← supabase/functions/web-search (Firecrawl)
+- `POST /api/summarize-url` ← supabase/functions/summarize-url
+Remaining (image-search, video-search, news-search, nexus-*, poi-crawler, generate-blueprint, generate-build-guide, generate-trending-content, ayrshare-post, feedback-ai, poi-api) follow the same template — ported as the client switches over in B6.
 
 ## B6 — Client cutover ⬜
-- Add `src/integrations/cf/client.ts` (fetch-based)
-- Codemod: `@/integrations/supabase/client` → `@/integrations/cf/client`
-- Delete `src/integrations/supabase/*`, `src/integrations/lovable/*`, `src/lib/supabase-runtime.ts`, `supabase/` dir, `public/config.js`
+- Add `src/integrations/cf/client.ts` (fetch wrapper around the `/api/*` surface)
+- Codemod `@/integrations/supabase/client` → `@/integrations/cf/client`
+- Delete `src/integrations/supabase/*`, `src/integrations/lovable/*`, `src/lib/supabase-runtime.ts`, `supabase/`, `public/config.js`
 - `bun remove @supabase/supabase-js`
-- Deploy to Cloudflare Pages preview, smoke test, flip DNS
+- `wrangler d1 create` + apply migrations + `wrangler pages secret put` for each item in `CLOUDFLARE_MIGRATION.md`
+- `wrangler pages deploy` → smoke test → flip DNS
 
-## What I need from you next
-1. **Rotate the API token you pasted in chat** (treat it as leaked). I'll request the new one via the secrets tool when B6 needs to deploy — never paste tokens in chat.
-2. Confirm D1 primary region (default: WEUR — closest to Lagos). KV/R2/Workers are global.
-3. Reply **"go B3"** for the Auth Worker.
-
----
-
-## Why this can't be a single turn
-The app has ~40 files importing `@/integrations/supabase/client`, 14 edge functions, 30+ RLS policies, and auth-bound session storage. Swapping it all atomically without B2-B5 in place would render the app unusable (no auth, no data, no AI). Each batch is independently testable and reversible.
+## Next from you
+1. Provision D1: I'll request the `database_id` via secrets and uncomment the binding in `wrangler.jsonc`.
+2. Add the auth/AI/Firecrawl/NASA secrets to the Pages project (I'll prompt with the secrets tool when ready).
+3. Reply **"go B6"** when the auth + data surface above is enough to swap the client.
