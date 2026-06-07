@@ -6,6 +6,9 @@ export interface CfUser {
   id: string;
   email: string;
   display_name?: string | null;
+  // Legacy Supabase-compatible fields (kept until full codemod lands in B6)
+  user_metadata?: Record<string, unknown>;
+  email_confirmed_at?: string | null;
 }
 
 export interface CfProfile {
