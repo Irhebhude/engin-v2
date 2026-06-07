@@ -211,7 +211,7 @@ const DeveloperDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title="Developer API — SEARCH-POI" description="Access the SEARCH-POI Intelligence API" path="/developer" />
+      <SEOHead title="Developer API — SEARCH-POI" description="Manage your SEARCH-POI Intelligence API keys, track usage and credits, and test endpoints in the developer playground for AI-powered search integration." path="/developer" />
       <Header />
 
       <main className="container mx-auto max-w-4xl px-4 pt-20 pb-12">

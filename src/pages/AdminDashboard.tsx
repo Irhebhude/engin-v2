@@ -67,7 +67,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <SEOHead title="Admin Dashboard — SEARCH-POI" description="Admin-only dashboard" path="/admin" />
+      <SEOHead title="Admin Dashboard — SEARCH-POI" description="Admin-only control center for SEARCH-POI: monitor real-time platform stats, user activity, search volume, system health, and operational metrics." path="/admin" />
       <main className="pt-20 pb-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
