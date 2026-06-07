@@ -66,6 +66,7 @@ const Index = () => {
       />
       <Header />
 
+      <main>
       {/* HERO — hyper-minimalist, centered, search-centric */}
       <section className="workspace-shell px-4">
         {/* Wordmark logo */}
@@ -211,6 +212,7 @@ const Index = () => {
 
         <AdSense adSlot="9944378861" adFormat="horizontal" className="mt-12" />
       </section>
+      </main>
 
       <Footer />
       <LocationSearch isOpen={showLocationSearch} onClose={() => setShowLocationSearch(false)} />
