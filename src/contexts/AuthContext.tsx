@@ -1,26 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
-
-interface Profile {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  referral_code: string;
-  referred_by: string | null;
-  email_verified: boolean;
-  search_count: number;
-  created_at: string;
-  is_premium: boolean;
-  poi_points: number;
-  lite_mode: boolean;
-}
+import { cf, type CfUser, type CfProfile } from "@/integrations/cf/client";
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
+  user: CfUser | null;
+  session: CfUser | null; // legacy alias for compatibility
+  profile: CfProfile | null;
   loading: boolean;
   signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -38,97 +22,63 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [user, setUser] = useState<CfUser | null>(null);
+  const [profile, setProfile] = useState<CfProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) setProfile(data as unknown as Profile);
+  const loadMe = async () => {
+    const { data } = await cf.auth.getUser();
+    if (data?.user) {
+      setUser(data.user);
+      setProfile(data.profile ?? null);
+    } else {
+      setUser(null);
+      setProfile(null);
+    }
+    setLoading(false);
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    const { data } = await cf.data.get<CfProfile>("profiles");
+    if (data) setProfile(data);
   };
 
   const toggleLiteMode = async () => {
-    if (!user || !profile) return;
+    if (!profile) return;
     const newVal = !profile.lite_mode;
-    await supabase.from("profiles").update({ lite_mode: newVal } as any).eq("id", user.id);
-    setProfile((p) => p ? { ...p, lite_mode: newVal } : p);
+    await cf.data.patch("profiles", { lite_mode: newVal });
+    setProfile((p) => (p ? { ...p, lite_mode: newVal } : p));
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
+    loadMe();
+    const { unsubscribe } = cf.auth.onAuthStateChange((_event, u) => {
+      if (u) loadMe();
+      else { setUser(null); setProfile(null); }
     });
-
-    return () => subscription.unsubscribe();
+    return () => { unsubscribe(); };
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string, referralCode?: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { display_name: displayName },
-      },
-    });
-    if (error) return { error: error.message };
-
-    if (referralCode && data.user) {
-      setTimeout(async () => {
-        await supabase.rpc("process_referral", { referral_code_input: referralCode });
-      }, 1000);
-    }
-
-    return { error: null };
+    const { error } = await cf.auth.signUp(email, password, displayName, referralCode);
+    if (!error) await loadMe();
+    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-
-    const pendingCode = localStorage.getItem("pending_referral_code");
-    if (pendingCode) {
-      await supabase.rpc("process_referral", { referral_code_input: pendingCode });
-      localStorage.removeItem("pending_referral_code");
-    }
-
-    return { error: null };
+    const { error } = await cf.auth.signIn(email, password);
+    if (!error) await loadMe();
+    return { error };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await cf.auth.signOut();
     setUser(null);
-    setSession(null);
     setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile, toggleLiteMode }}>
+    <AuthContext.Provider value={{ user, session: user, profile, loading, signUp, signIn, signOut, refreshProfile, toggleLiteMode }}>
       {children}
     </AuthContext.Provider>
   );
