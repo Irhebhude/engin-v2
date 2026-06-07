@@ -41,18 +41,7 @@ Remaining tables (vaults, business listings, POI points, referrals, etc.) follow
 - `POST /api/summarize-url` ← supabase/functions/summarize-url
 Remaining (image-search, video-search, news-search, nexus-*, poi-crawler, generate-blueprint, generate-build-guide, generate-trending-content, ayrshare-post, feedback-ai, poi-api) follow the same template — ported as the client switches over in B6.
 
-## B6 — Client cutover 🟡
-- ✅ `src/integrations/cf/client.ts` — fetch wrapper for `/api/auth`, `/api/data/*`, `/api/<fn>`
-- ✅ `src/contexts/AuthContext.tsx` cut over to `cf.auth` (no more `@supabase/supabase-js` in the auth path)
-- ✅ Removed `public/config.js` + `src/lib/supabase-runtime.ts` (runtime-Supabase fallback gone)
-- ✅ `robots.txt` sitemap → `engin-v2.searchpoi.workers.dev`
-- ⬜ Codemod remaining 27 files: replace `from "@/integrations/supabase/client"` with `from "@/integrations/cf/client"` and rewrite `.from(table).select/insert/update` → `cf.data.get/post/patch`
-- ⬜ Delete `src/integrations/supabase/{client,types}.ts` + `supabase/` directory once codemod is green
-- ⬜ `bun remove @supabase/supabase-js`
-- ⬜ `wrangler d1 create` + apply migrations + `wrangler pages secret put` for each item in `CLOUDFLARE_MIGRATION.md`
-- ⬜ `wrangler pages deploy` → smoke test → flip DNS
-
-## B6 — Original checklist (reference)
+## B6 — Client cutover ⬜
 - Add `src/integrations/cf/client.ts` (fetch wrapper around the `/api/*` surface)
 - Codemod `@/integrations/supabase/client` → `@/integrations/cf/client`
 - Delete `src/integrations/supabase/*`, `src/integrations/lovable/*`, `src/lib/supabase-runtime.ts`, `supabase/`, `public/config.js`
