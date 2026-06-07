@@ -113,7 +113,7 @@ const AcquisitionControl = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <SEOHead title="Acquisition Control — SEARCH-POI" description="Admin acquisition posting tool" path="/admin/acquisition-control" />
+      <SEOHead title="Acquisition Control — SEARCH-POI" description="Internal SEARCH-POI growth tool for posting acquisition content across social media channels via the Ayrshare integration. Admin access only." path="/admin/acquisition-control" />
       <main className="pt-20 pb-16 px-4">
         <div className="container mx-auto max-w-4xl space-y-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
