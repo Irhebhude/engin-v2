@@ -77,7 +77,7 @@ const Index = () => {
         >
           <IndependenceBadge />
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl overflow-hidden ring-1 ring-primary/30 shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.45)]">
-            <img src="/search-poi-logo.jpg" alt="SEARCH-POI" className="w-full h-full object-cover" />
+            <img src="/search-poi-logo.jpg" alt="SEARCH-POI" width={80} height={80} fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-mega text-center">
             <span className="text-foreground">SEARCH</span>
