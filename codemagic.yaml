@@ -6,6 +6,7 @@ workflows:
     environment:
       vars:
         PACKAGE_NAME: com.archpoi.searchpoi
+        NODE_OPTIONS: --openssl-legacy-provider
       node: 18
       java: 17
     scripts:
