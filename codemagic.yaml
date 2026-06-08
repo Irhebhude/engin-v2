@@ -7,11 +7,14 @@ workflows:
       vars:
         PACKAGE_NAME: com.archpoi.searchpoi
         NODE_OPTIONS: --openssl-legacy-provider
-      node: 20  # Changed from 18 to 20
+      node: 20
       java: 17
     scripts:
       - name: Install dependencies
         script: npm install
+        
+      - name: Install Capacitor CLI
+        script: npm install -D @capacitor/core @capacitor/android @capacitor/cli
         
       - name: Build web app
         script: npm run build
