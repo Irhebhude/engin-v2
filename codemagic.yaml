@@ -1,7 +1,7 @@
 workflows:
   android-release:
     name: SEARCH-POI Android Build
-    instance_type: mac_mini_m1  # Free tier
+    instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
       vars:
@@ -26,7 +26,3 @@ workflows:
         
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
-    publishing:
-      email:
-        recipients:
-          - $EMAIL  # Codemagic will email you the .apk
