@@ -8,7 +8,7 @@ workflows:
         PACKAGE_NAME: com.archpoi.searchpoi
         NODE_OPTIONS: --openssl-legacy-provider
       node: 20
-      java: 17
+      java: 21
     scripts:
       - name: Install dependencies
         script: npm install
