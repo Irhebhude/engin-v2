@@ -7,7 +7,7 @@ workflows:
       vars:
         PACKAGE_NAME: com.archpoi.searchpoi
         NODE_OPTIONS: --openssl-legacy-provider
-      node: 18
+      node: 20  # Changed from 18 to 20
       java: 17
     scripts:
       - name: Install dependencies
