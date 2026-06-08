@@ -19,10 +19,19 @@ workflows:
       - name: Build web app
         script: npm run build
         
-      - name: Init Capacitor + Add Android
+      - name: Create capacitor.config.ts
         script: |
-          npx cap init "SEARCH-POI" "com.archpoi.searchpoi" --web-dir=dist --skip-prompts || echo "Already initialized"
-          npx cap add android
+          echo 'import { CapacitorConfig } from "@capacitor/cli";
+          const config: CapacitorConfig = {
+            appId: "com.archpoi.searchpoi",
+            appName: "SEARCH-POI",
+            webDir: "dist",
+            bundledWebRuntime: false
+          };
+          export default config;' > capacitor.config.ts
+        
+      - name: Add Android Platform
+        script: npx cap add android || npx cap sync android
         
       - name: Sync Capacitor
         script: npx cap sync android
