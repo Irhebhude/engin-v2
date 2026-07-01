@@ -202,27 +202,13 @@ const Auth = () => {
           <div className="flex-1 h-px bg-border/40" />
         </div>
 
-        {/* Google OAuth */}
+        {/* Google OAuth — Cloudflare Workers flow (/api/auth/google/start) */}
         <button
           type="button"
           disabled={loading}
-          onClick={async () => {
-            setLoading(true);
-            try {
-              const { lovable } = await import("@/integrations/lovable/index");
-              const result = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: window.location.origin,
-              });
-              if (result.error) {
-                toast({ title: "Google Sign-In Failed", description: String(result.error), variant: "destructive" });
-              } else if (!result.redirected) {
-                toast({ title: "Welcome!" });
-                navigate("/");
-              }
-            } catch (err) {
-              toast({ title: "Google Sign-In Failed", description: "Something went wrong", variant: "destructive" });
-            }
-            setLoading(false);
+          onClick={() => {
+            const redirect = encodeURIComponent(searchParams.get("redirect") || "/");
+            window.location.href = `/api/auth/google/start?redirect=${redirect}`;
           }}
           className="w-full py-2.5 rounded-xl border border-border/30 bg-secondary/50 text-foreground font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >

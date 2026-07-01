@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "engine-v2",
+  "name": "search-poi-v2-global",
   "compatibility_date": "2026-05-16",
   "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "./dist",
@@ -9,22 +9,25 @@
     "not_found_handling": "single-page-application"
   },
   // ─────────────────────────────────────────────────────────
-  // Cloudflare bindings (uncomment + fill after `wrangler d1/r2/kv create`)
+  // Cloudflare bindings — fill IDs after `wrangler d1/kv/r2 create`
   // ─────────────────────────────────────────────────────────
-  // "d1_databases": [
-  //   { "binding": "DB", "database_name": "search-poi", "database_id": "<d1-id>" }
-  // ],
-  // "r2_buckets": [
-  //   { "binding": "STORAGE", "bucket_name": "search-poi-storage" }
-  // ],
-  // "kv_namespaces": [
-  //   { "binding": "CACHE", "id": "<kv-id>" }
-  // ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "search-poi-db-global", "database_id": "REPLACE_WITH_D1_ID" }
+  ],
+  "kv_namespaces": [
+    { "binding": "CRYPTO_CACHE",   "id": "REPLACE_WITH_KV_CRYPTO_ID" },
+    { "binding": "AUTH_SESSIONS",  "id": "REPLACE_WITH_KV_AUTH_ID" }
+  ],
+  "r2_buckets": [
+    { "binding": "ASSETS", "bucket_name": "voice-notes-global" }
+  ],
   "vars": {
     "APP_ENV": "production"
   }
-  // Secrets (set via `wrangler pages secret put <NAME>`):
-  //   JWT_SECRET, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
-  //   LOVABLE_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY direct), FIRECRAWL_API_KEY,
-  //   NASA_API_KEY, AYRSHARE_API_KEY, TURNSTILE_SECRET_KEY
+  // Secrets — set via `wrangler pages secret put <NAME>`:
+  //   JWT_SECRET
+  //   GOOGLE_OAUTH_CLIENT_ID     (a.k.a. GOOGLE_CLIENT_ID)
+  //   GOOGLE_OAUTH_CLIENT_SECRET (a.k.a. GOOGLE_CLIENT_SECRET)
+  //   LOVABLE_API_KEY  FIRECRAWL_API_KEY  NASA_API_KEY
+  //   AYRSHARE_API_KEY  TURNSTILE_SECRET_KEY
 }
