@@ -6,6 +6,7 @@ import { clearSearchHistory } from "@/lib/search-context";
 import { useToast } from "@/hooks/use-toast";
 import LiteModeToggle from "@/components/LiteModeToggle";
 import POIPointsBadge from "@/components/POIPointsBadge";
+import LiveDateTime from "@/components/LiveDateTime";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ADMIN_EMAIL = "prosperozoya50@gmail.com";
@@ -128,6 +129,9 @@ const Header = () => {
             </span>
           </div>
         </Link>
+
+        {/* Live worldwide date/time — ticks every 1s, drift-syncs /api/time */}
+        <div className="hidden md:flex"><LiveDateTime /></div>
 
         {/* Desktop nav */}
         <nav className="hidden sm:flex items-center gap-3 text-sm relative">
