@@ -103,18 +103,9 @@ export default function SecuritySettings() {
   }
 
   async function handleChangePasscode() {
-    if (pass) {
-      const cur = window.prompt("Enter current passcode:") || "";
-      if (!(await verifyPasscode(cur))) { toast.error("Incorrect passcode"); return; }
-    }
-    const a = window.prompt("Enter new 4-digit passcode:") || "";
-    if (!/^\d{4}$/.test(a)) { toast.error("Must be 4 digits"); return; }
-    const b = window.prompt("Confirm new passcode:") || "";
-    if (a !== b) { toast.error("Passcodes do not match"); return; }
-    await setPasscode(a);
-    toast.success("Passcode updated");
-    refresh();
+    openPasscodeModal();
   }
+
 
   function exportCSV() {
     const blob = new Blob([logToCSV()], { type: "text/csv" });
