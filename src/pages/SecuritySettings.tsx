@@ -19,12 +19,36 @@ export default function SecuritySettings() {
   const [pass, setPass] = useState(hasPasscode());
   const [log, setLog] = useState(getLog());
   const [busy, setBusy] = useState(false);
+  const [passModal, setPassModal] = useState<null | "set" | "change">(null);
+  const [curCode, setCurCode] = useState("");
+  const [newA, setNewA] = useState("");
+  const [newB, setNewB] = useState("");
+  const [modalErr, setModalErr] = useState<string | null>(null);
 
   function refresh() {
     setMethod(getMethod());
     setBio(hasBiometric());
     setPass(hasPasscode());
     setLog(getLog());
+  }
+
+  function openPasscodeModal() {
+    setCurCode(""); setNewA(""); setNewB(""); setModalErr(null);
+    setPassModal(hasPasscode() ? "change" : "set");
+  }
+
+  async function submitPasscodeModal(e: React.FormEvent) {
+    e.preventDefault();
+    setModalErr(null);
+    if (passModal === "change") {
+      if (!(await verifyPasscode(curCode))) { setModalErr("Current passcode incorrect"); return; }
+    }
+    if (!/^\d{4}$/.test(newA)) { setModalErr("New passcode must be 4 digits"); return; }
+    if (newA !== newB) { setModalErr("Passcodes do not match"); return; }
+    await setPasscode(newA);
+    toast.success(passModal === "change" ? "Passcode updated" : "Passcode created");
+    setPassModal(null);
+    refresh();
   }
 
   async function handleAddBiometric() {
