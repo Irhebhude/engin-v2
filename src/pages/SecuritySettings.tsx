@@ -195,6 +195,54 @@ export default function SecuritySettings() {
           )}
         </Section>
       </div>
+
+      {passModal && (
+        <div className="fixed inset-0 z-[110] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPassModal(null)}>
+          <form
+            onSubmit={submitPasscodeModal}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-[#0A0F1E] border border-[rgba(0,212,255,0.25)] p-6 space-y-4"
+          >
+            <h3 className="text-base font-semibold flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-[#00D4FF]" />
+              {passModal === "change" ? "Change passcode" : "Create passcode"}
+            </h3>
+            {passModal === "change" && (
+              <input
+                inputMode="numeric" pattern="\d{4}" maxLength={4} required autoFocus
+                placeholder="Current passcode"
+                value={curCode}
+                onChange={(e) => setCurCode(e.target.value.replace(/\D/g, ""))}
+                className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-center tracking-[0.6em] text-lg focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+              />
+            )}
+            <input
+              inputMode="numeric" pattern="\d{4}" maxLength={4} required
+              autoFocus={passModal === "set"}
+              placeholder="New 4-digit passcode"
+              value={newA}
+              onChange={(e) => setNewA(e.target.value.replace(/\D/g, ""))}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-center tracking-[0.6em] text-lg focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            <input
+              inputMode="numeric" pattern="\d{4}" maxLength={4} required
+              placeholder="Confirm passcode"
+              value={newB}
+              onChange={(e) => setNewB(e.target.value.replace(/\D/g, ""))}
+              className="w-full h-11 px-3 rounded-lg bg-white/[0.03] border border-[rgba(0,212,255,0.2)] text-center tracking-[0.6em] text-lg focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+            />
+            {modalErr && <p className="text-xs text-[#FF3B3B]">{modalErr}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setPassModal(null)} className="flex-1 h-11 rounded-lg border border-white/10 text-sm">
+                Cancel
+              </button>
+              <button type="submit" className="flex-1 h-11 rounded-lg bg-[#00D4FF] text-[#0A0F1E] font-semibold text-sm">
+                {passModal === "change" ? "Update" : "Create"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
