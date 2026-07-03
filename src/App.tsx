@@ -6,8 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ReferralGate from "@/components/ReferralGate";
 import OfflineStatusBar from "@/components/OfflineStatusBar";
-import DeviceLockGate from "@/components/security/DeviceLockGate";
-import SecuritySettings from "./pages/SecuritySettings";
+import ClockCompat from "./pages/ClockCompat";
 import LiveSources from "./pages/LiveSources";
 import LiveTicker from "@/components/live/LiveTicker";
 
@@ -58,9 +57,8 @@ const App = () => (
         <OfflineStatusBar />
         <LiveTicker />
         <BrowserRouter>
-          <DeviceLockGate>
           <Routes>
-            <Route path="/security" element={<SecuritySettings />} />
+            <Route path="/clock-compat" element={<ClockCompat />} />
             <Route path="/pages" element={<PagesDirectory />} />
             <Route path="/nexus" element={<NexusCore />} />
             <Route path="/live-sources" element={<LiveSources />} />
@@ -90,7 +88,6 @@ const App = () => (
             <Route path="/feedback" element={<ReferralGate><Feedback /></ReferralGate>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </DeviceLockGate>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

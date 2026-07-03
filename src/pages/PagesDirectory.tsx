@@ -37,7 +37,7 @@ const GROUPS: Group[] = [
     title: "Account & Security",
     items: [
       { to: "/auth", label: "Sign In / Up", desc: "Authentication", icon: User },
-      { to: "/security", label: "Security & Passcode", desc: "Lock, PIN, biometric, recovery", icon: Shield },
+      { to: "/clock-compat", label: "Clock Compatibility", desc: "Preview live clock across locales/timezones", icon: Shield },
       { to: "/referral", label: "Referral Program", desc: "Invite to unlock", icon: Gift },
       { to: "/premium", label: "Premium", desc: "Upgrade benefits", icon: Star },
       { to: "/pricing", label: "Pricing", desc: "Plan tiers", icon: Tag },

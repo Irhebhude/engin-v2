@@ -17,7 +17,7 @@ const NAV_LINKS = [
   { to: "/pricing", label: "Pricing" },
   { to: "/insights", label: "Insights" },
   { to: "/contact", label: "Contact" },
-  { to: "/security", label: "Security" },
+  
 ];
 
 const TOOL_GROUPS: { category: string; items: { id: string; label: string; icon: any; to: string }[] }[] = [
