@@ -53,12 +53,13 @@ const LiveDateTime = ({ compact = false }: { compact?: boolean }) => {
     };
   }, []);
 
-  const fmt = new Intl.DateTimeFormat(locale, {
-    dateStyle: compact ? undefined : "medium",
-    timeStyle: compact ? "short" : "medium",
-    timeZone: tz,
-    timeZoneName: compact ? undefined : "short",
-  });
+  const fmt = new Intl.DateTimeFormat(
+    locale,
+    compact
+      ? { timeStyle: "short", timeZone: tz }
+      : { dateStyle: "medium", timeStyle: "medium", timeZone: tz }
+  );
+
 
   return (
     <span
