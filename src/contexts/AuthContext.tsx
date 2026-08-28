@@ -24,7 +24,6 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   toggleLiteMode: () => Promise<void>;
@@ -145,26 +144,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: null };
   };
 
-  const signInWithGoogle = async () => {
-    if (!isSupabaseConfigured) {
-      return { error: "Authentication is not configured. Please contact the administrator." };
-    }
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) return { error: error.message };
-    return { error: null };
-  };
-
   const signOut = async () => {
+    // Try Cloudflare Pages Function sign-out first
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch { /* Cloudflare signout unavailable */ }
+    // Also try Supabase sign-out
     try {
       if (isSupabaseConfigured) {
         await supabase.auth.signOut();
       }
-    } catch { /* signout may fail if Supabase is down */ }
+    } catch { /* Supabase signout unavailable */ }
     setUser(null);
     setSession(null);
     setProfile(null);
@@ -182,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, refreshProfile, toggleLiteMode }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile, toggleLiteMode }}>
       {children}
     </AuthContext.Provider>
   );

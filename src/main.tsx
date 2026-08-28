@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "./index.css";
 
 // Self-hosted fonts (Phase 2: removes Google Fonts CDN dependency)
@@ -32,4 +33,8 @@ import("@/lib/offline-seed").then(({ initOfflineData }) => {
   });
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
