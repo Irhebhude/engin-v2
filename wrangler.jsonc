@@ -2,32 +2,12 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "search-poi-v2-global",
   "compatibility_date": "2026-05-16",
-  "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "./dist",
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
   },
-  // ─────────────────────────────────────────────────────────
-  // Cloudflare bindings — fill IDs after `wrangler d1/kv/r2 create`
-  // ─────────────────────────────────────────────────────────
-  "d1_databases": [
-    { "binding": "DB", "database_name": "search-poi-db-global", "database_id": "REPLACE_WITH_D1_ID" }
-  ],
-  "kv_namespaces": [
-    { "binding": "CRYPTO_CACHE",   "id": "REPLACE_WITH_KV_CRYPTO_ID" },
-    { "binding": "AUTH_SESSIONS",  "id": "REPLACE_WITH_KV_AUTH_ID" }
-  ],
-  "r2_buckets": [
-    { "binding": "ASSETS", "bucket_name": "voice-notes-global" }
-  ],
   "vars": {
     "APP_ENV": "production"
   }
-  // Secrets — set via `wrangler pages secret put <NAME>`:
-  //   JWT_SECRET
-  //   GOOGLE_OAUTH_CLIENT_ID     (a.k.a. GOOGLE_CLIENT_ID)
-  //   GOOGLE_OAUTH_CLIENT_SECRET (a.k.a. GOOGLE_CLIENT_SECRET)
-  //   LOVABLE_API_KEY  FIRECRAWL_API_KEY  NASA_API_KEY
-  //   AYRSHARE_API_KEY  TURNSTILE_SECRET_KEY
 }
