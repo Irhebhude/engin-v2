@@ -50,4 +50,11 @@ export const supabase: any = {
   },
   from: (_table: string) => createNoopQuery(),
   rpc: (_fn: string, _params?: any) => Promise.resolve({ data: null, error: null }),
+  // Realtime channel stubs — used by SearchAutocomplete for trending subscriptions
+  channel: (_name: string) => ({
+    on: () => ({ subscribe: () => ({}) }),
+  }),
+  removeChannel: () => Promise.resolve({ error: null }),
+  removeChannels: () => {},
+  getChannels: () => [],
 };
