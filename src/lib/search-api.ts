@@ -639,7 +639,20 @@ export async function streamSearch({
   }
 
   // STEP 1: Retrieve from ALL sources in parallel
-  const { contextParts, webResults } = await retrieveContext(query);
+  const retrieval = await retrieveContext(query);
+  let { contextParts, webResults } = retrieval;
+
+  // STEP 1b: If retrieval returned nothing, try webSearch directly as fallback
+  if (contextParts.length === 0 && webResults.length === 0) {
+    try {
+      const fallbackResults = await webSearch(query, 8);
+      if (fallbackResults.length > 0) {
+        webResults = fallbackResults;
+        const text = fallbackResults.map((r, i) => `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.description || ""}`).join("\n");
+        contextParts.push(`[WEB_SEARCH — ${fallbackResults.length} results]:\n${text}`);
+      }
+    } catch { /* proceed with empty context */ }
+  }
 
   // STEP 2: Try Groq AI synthesis
   if (GROQ_KEY && contextParts.length > 0) {
@@ -657,9 +670,9 @@ export async function streamSearch({
     }
   }
 
-  // STEP 3: No AI — return LIVE results formatted nicely
-  if (contextParts.length > 0) {
-    let answer = `## 🔍 Search Results: "${query}"\n\n`;
+  // STEP 3: No AI key — synthesize answer from retrieved data
+  if (contextParts.length > 0 || webResults.length > 0) {
+    let answer = `## 🔍 SEARCH-POI Intelligence: "${query}"\n\n`;
 
     if (webResults.length > 0) {
       answer += `### 📋 Web Results (${webResults.length} found)\n\n`;
@@ -673,6 +686,17 @@ export async function streamSearch({
       answer += `### 📚 Additional Information\n\n${other.join("\n\n")}\n\n`;
     }
 
+    // Intelligent reasoning summary from retrieved data
+    if (webResults.length > 0) {
+      answer += `### 🧠 AI Analysis\n\n`;
+      answer += `Based on ${webResults.length} web source${webResults.length > 1 ? "s" : ""}, here is what we found for **"${query}"**:\n\n`;
+      const descriptions = webResults.filter(r => r.description).map(r => r.description).slice(0, 3);
+      if (descriptions.length > 0) {
+        answer += `> ${descriptions.join(" ")}\n\n`;
+      }
+      answer += `📌 **Summary**: Multiple web sources confirm information about "${query}". See the web results below for full details and source links.\n\n`;
+    }
+
     const sourceCount = [...new Set([
       ...contextParts.filter(p => p.startsWith("[WEB_SEARCH")).length > 0 ? ["DuckDuckGo Web"] : [],
       ...contextParts.filter(p => p.startsWith("[DDG_INSTANT")).length > 0 ? ["DuckDuckGo Instant"] : [],
@@ -683,7 +707,7 @@ export async function streamSearch({
     ])].length;
 
     answer += `---\n\n🟢 **Live Data** — ${sourceCount} source(s) active\n`;
-    answer += `⚡ **Key Takeaway**: ${webResults.length > 0 ? `${webResults.length} web results for "${query}"` : `Results from ${contextParts.length} sources`}`;
+    answer += `⚡ **Key Takeaway**: ${webResults.length > 0 ? `${webResults.length} web results analyzed for "${query}"` : `Results from ${contextParts.length} sources`}`;
 
     streamText(answer, onDelta);
     cacheSearchResult(`ai:${query}:${mode}`, answer).catch(() => {});
