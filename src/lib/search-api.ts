@@ -659,28 +659,8 @@ export async function streamSearch({
   try {
     const aiResult = await aiReasoningEngine(query, contextParts.join("\n\n"), webResults);
     if (aiResult.text) {
-      // Stream the AI answer with formatting
-      const providerLabel = aiResult.provider === "context-synthesis" ? "Multi-Source Synthesis"
-        : aiResult.provider === "truth-engine" ? "Ownership Verification"
-        : aiResult.provider === "wikipedia" ? "Wikipedia Knowledge"
-        : aiResult.provider === "duckduckgo" ? "DuckDuckGo Knowledge"
-        : aiResult.provider === "coingecko" ? "CoinGecko Live Data"
-        : aiResult.provider === "open-meteo" ? "Open-Meteo Weather"
-        : `${aiResult.provider} AI`;
-
-      let answerText = aiResult.text;
-
-      // Add provider and confidence footer
-      answerText += `\n\n---\n`;
-      answerText += `🧠 **Provider**: ${providerLabel}`;
-      answerText += ` • **Confidence**: ${aiResult.confidence}%`;
-      answerText += ` • **ICS Score**: ${aiResult.antiHallucinationScore}/100`;
-      if (aiResult.sources.length > 0) {
-        answerText += `\n📚 **Sources**: ${aiResult.sources.map(s => s.name).join(", ")}`;
-      }
-
-      streamText(answerText, onDelta);
-      cacheSearchResult(`ai:${query}:${mode}`, answerText).catch(() => {});
+      streamText(aiResult.text, onDelta);
+      cacheSearchResult(`ai:${query}:${mode}`, aiResult.text).catch(() => {});
       onDone();
       return;
     }
