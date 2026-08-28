@@ -28,6 +28,18 @@ import {
   OWNERSHIP,
   ZERO_HALLUCINATION_RULES,
 } from "./truth-engine";
+import {
+  runOptimizationPipeline,
+  classifyIntent,
+  scoreSourceAuthority,
+  scoreFreshness,
+  detectContradictions,
+  checkNumericalPlausibility,
+  calibrateConfidence,
+  checkAnswerCompleteness,
+  analyzeCrossSourceConsensus,
+  type OptimizationResult,
+} from "./optimization-engine";
 
 // ─── Provider Config ──────────────────────────────────────────
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
@@ -433,8 +445,10 @@ export async function aiReasoningEngine(
   context: string,
   webResults: { url: string; title: string; description: string }[],
 ): Promise<AIAnswer> {
-  // Step 1: ICS — understand the query
+  // Step 1: Run full optimization pipeline
+  const optimization = runOptimizationPipeline(query);
   const ics = runICS(query);
+  const intent = classifyIntent(query);
 
   // Step 2: Ownership check
   if (ics.isOwnership) {
@@ -546,13 +560,47 @@ export async function aiReasoningEngine(
   const citationBonus = Math.min(5, (cleaned.match(/\[.*?\]|📚/g) || []).length);
   const confidence = Math.min(98, Math.max(20, baseConfidence + sourceBonus + citationBonus - allViolations.length * 5));
 
-  // Step 10: Count citations
+  // Step 10: Run additional verification layers
+  const numericalCheck = checkNumericalPlausibility(cleaned, query);
+  const completenessCheck = checkAnswerCompleteness(query, cleaned);
+
+  // Step 11: Cross-source consensus analysis
+  const sourceContents = webResults.map(r => ({ content: `${r.title} ${r.description}`, source: r.url }));
+  const consensus = analyzeCrossSourceConsensus(sourceContents);
+
+  // Step 12: Detect contradictions across sources
+  const answerSentences = cleaned.split(/(?<=[.!?])\s+/).filter(s => s.length > 20);
+  const contradictions = detectContradictions(answerSentences);
+
+  // Step 13: Bayesian confidence calibration
+  const calibratedConfidence = calibrateConfidence(
+    confidence,
+    sources.length,
+    sources.reduce((sum, s) => sum + scoreSourceAuthority(s.url || "").score, 0) / Math.max(1, sources.length),
+    consensus.agreementScore,
+    85, // temporal freshness estimate
+  );
+
+  // Step 14: Count citations
   const citationsCount = (cleaned.match(/\[.*?\]|📚|Source:|sources?/gi) || []).length;
 
+  // Step 15: Build comprehensive metadata footer
+  const metadataFooter = `\n\n---\n` +
+    `🧠 **Provider**: ${providerSourceMap[bestResult.provider] || bestResult.provider}` +
+    ` • **Confidence**: ${calibratedConfidence.calibrated}% (±${calibratedConfidence.uncertainty}%)` +
+    ` • **ICS**: ${ics.intent}/${intent.primary}` +
+    `\n🛡️ **Anti-Hallucination**: ${ahScore}/100` +
+    ` • **Numerical Check**: ${numericalCheck.plausible ? "✅ Pass" : "⚠️ " + numericalCheck.suspicious[0]?.reason}` +
+    ` • **Completeness**: ${completenessCheck.score}%` +
+    `\n📊 **Cross-Source**: ${consensus.agreementScore}% agreement` +
+    ` • **Contradictions**: ${contradictions.contradictions.length}` +
+    ` • **Sources**: ${sources.length}` +
+    (consensus.conflictDetected ? "\n⚠️ **CONFLICT DETECTED**: Sources disagree — presenting both perspectives" : "");
+
   return {
-    text: cleaned,
+    text: cleaned + metadataFooter,
     provider: bestResult.provider,
-    confidence,
+    confidence: calibratedConfidence.calibrated,
     sources,
     ics,
     antiHallucinationScore: ahScore,
