@@ -18,6 +18,7 @@ import {
   answerOwnershipOffline,
   filterHallucinations,
 } from "./truth-engine";
+import { aiReasoningEngine } from "./ai-engine";
 
 // ─── Config ───────────────────────────────────────────────────
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
@@ -654,65 +655,37 @@ export async function streamSearch({
     } catch { /* proceed with empty context */ }
   }
 
-  // STEP 2: Try Groq AI synthesis
-  if (GROQ_KEY && contextParts.length > 0) {
-    try {
-      const fullAnswer = await callGroqStreaming(query, contextParts.join("\n\n"), mode, context, onDelta);
-      if (fullAnswer) {
-        const hasLive = contextParts.some(p => p.includes("[WEB_SEARCH") || p.includes("[DDG_INSTANT") || p.includes("[WIKIPEDIA") || p.includes("[CRYPTO") || p.includes("[WEATHER") || p.includes("[POI_LIVE"));
-        const { cleaned } = filterHallucinations(fullAnswer, { hasLiveData: hasLive });
-        cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
+  // STEP 2: Multi-provider AI reasoning engine (tries 10+ providers with auto-fallback)
+  try {
+    const aiResult = await aiReasoningEngine(query, contextParts.join("\n\n"), webResults);
+    if (aiResult.text) {
+      // Stream the AI answer with formatting
+      const providerLabel = aiResult.provider === "context-synthesis" ? "Multi-Source Synthesis"
+        : aiResult.provider === "truth-engine" ? "Ownership Verification"
+        : aiResult.provider === "wikipedia" ? "Wikipedia Knowledge"
+        : aiResult.provider === "duckduckgo" ? "DuckDuckGo Knowledge"
+        : aiResult.provider === "coingecko" ? "CoinGecko Live Data"
+        : aiResult.provider === "open-meteo" ? "Open-Meteo Weather"
+        : `${aiResult.provider} AI`;
+
+      let answerText = aiResult.text;
+
+      // Add provider and confidence footer
+      answerText += `\n\n---\n`;
+      answerText += `🧠 **Provider**: ${providerLabel}`;
+      answerText += ` • **Confidence**: ${aiResult.confidence}%`;
+      answerText += ` • **ICS Score**: ${aiResult.antiHallucinationScore}/100`;
+      if (aiResult.sources.length > 0) {
+        answerText += `\n📚 **Sources**: ${aiResult.sources.map(s => s.name).join(", ")}`;
       }
+
+      streamText(answerText, onDelta);
+      cacheSearchResult(`ai:${query}:${mode}`, answerText).catch(() => {});
       onDone();
       return;
-    } catch (e) {
-      console.warn("[search-api] Groq failed:", e);
     }
-  }
-
-  // STEP 3: No AI key — synthesize answer from retrieved data
-  if (contextParts.length > 0 || webResults.length > 0) {
-    let answer = `## 🔍 SEARCH-POI Intelligence: "${query}"\n\n`;
-
-    if (webResults.length > 0) {
-      answer += `### 📋 Web Results (${webResults.length} found)\n\n`;
-      webResults.slice(0, 8).forEach((r, i) => {
-        answer += `${i + 1}. **[${r.title}](${r.url})**\n   ${r.description || ""}\n\n`;
-      });
-    }
-
-    const other = contextParts.filter(p => !p.startsWith("[WEB_SEARCH") && !p.startsWith("[DDG_INSTANT"));
-    if (other.length > 0) {
-      answer += `### 📚 Additional Information\n\n${other.join("\n\n")}\n\n`;
-    }
-
-    // Intelligent reasoning summary from retrieved data
-    if (webResults.length > 0) {
-      answer += `### 🧠 AI Analysis\n\n`;
-      answer += `Based on ${webResults.length} web source${webResults.length > 1 ? "s" : ""}, here is what we found for **"${query}"**:\n\n`;
-      const descriptions = webResults.filter(r => r.description).map(r => r.description).slice(0, 3);
-      if (descriptions.length > 0) {
-        answer += `> ${descriptions.join(" ")}\n\n`;
-      }
-      answer += `📌 **Summary**: Multiple web sources confirm information about "${query}". See the web results below for full details and source links.\n\n`;
-    }
-
-    const sourceCount = [...new Set([
-      ...contextParts.filter(p => p.startsWith("[WEB_SEARCH")).length > 0 ? ["DuckDuckGo Web"] : [],
-      ...contextParts.filter(p => p.startsWith("[DDG_INSTANT")).length > 0 ? ["DuckDuckGo Instant"] : [],
-      ...contextParts.filter(p => p.startsWith("[WIKIPEDIA")).length > 0 ? ["Wikipedia"] : [],
-      ...contextParts.filter(p => p.startsWith("[LIVE_CRYPTO")).length > 0 ? ["CoinGecko"] : [],
-      ...contextParts.filter(p => p.startsWith("[LIVE_WEATHER")).length > 0 ? ["Open-Meteo"] : [],
-      ...contextParts.filter(p => p.startsWith("[POI_LIVE")).length > 0 ? ["OpenStreetMap"] : [],
-    ])].length;
-
-    answer += `---\n\n🟢 **Live Data** — ${sourceCount} source(s) active\n`;
-    answer += `⚡ **Key Takeaway**: ${webResults.length > 0 ? `${webResults.length} web results analyzed for "${query}"` : `Results from ${contextParts.length} sources`}`;
-
-    streamText(answer, onDelta);
-    cacheSearchResult(`ai:${query}:${mode}`, answer).catch(() => {});
-    onDone();
-    return;
+  } catch (e) {
+    console.warn("[search-api] AI engine failed:", e);
   }
 
   // STEP 4: Cached
