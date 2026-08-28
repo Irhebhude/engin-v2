@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+
+interface User {
+  id: string;
+  email: string;
+  displayName?: string;
+  referralCode?: string;
+}
 
 interface Profile {
   id: string;
@@ -19,7 +24,7 @@ interface Profile {
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
+  session: any;
   profile: Profile | null;
   loading: boolean;
   signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<{ error: string | null }>;
@@ -37,137 +42,91 @@ export const useAuth = () => {
   return ctx;
 };
 
+async function apiFetch(url: string, init?: RequestInit): Promise<any> {
+  const res = await fetch(url, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    if (!isSupabaseConfigured) return;
+  const fetchProfile = async () => {
     try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      if (data) setProfile(data as unknown as Profile);
+      const data = await apiFetch("/api/auth/me");
+      if (data?.user) {
+        setUser(data.user);
+        if (data.profile) setProfile(data.profile);
+      }
     } catch {
-      // Profile table may not exist or Supabase may be unreachable
+      setUser(null);
+      setProfile(null);
     }
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    await fetchProfile();
   };
 
   const toggleLiteMode = async () => {
     if (!user || !profile) return;
     const newVal = !profile.lite_mode;
-    try {
-      await supabase.from("profiles").update({ lite_mode: newVal } as any).eq("id", user.id);
-    } catch { /* Supabase unavailable */ }
     setProfile((p) => p ? { ...p, lite_mode: newVal } : p);
   };
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    fetchProfile().finally(() => setLoading(false));
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string, referralCode?: string) => {
-    if (!isSupabaseConfigured) {
-      return { error: "Authentication is not configured. Please contact the administrator." };
+    try {
+      const data = await apiFetch("/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ email, password, displayName, referralCode }),
+      });
+      if (data?.user) {
+        setUser(data.user);
+        setSession({ user: data.user });
+      }
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message || "Signup failed" };
     }
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { display_name: displayName },
-      },
-    });
-    if (error) return { error: error.message };
-
-    if (referralCode && data.user) {
-      setTimeout(async () => {
-        try {
-          await supabase.rpc("process_referral", { referral_code_input: referralCode });
-        } catch { /* referral processing unavailable */ }
-      }, 1000);
-    }
-
-    return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
-    if (!isSupabaseConfigured) {
-      return { error: "Authentication is not configured. Please contact the administrator." };
+    try {
+      const data = await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (data?.user) {
+        setUser(data.user);
+        setSession({ user: data.user });
+      }
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message || "Login failed" };
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-
-    const pendingCode = localStorage.getItem("pending_referral_code");
-    if (pendingCode) {
-      try {
-        await supabase.rpc("process_referral", { referral_code_input: pendingCode });
-      } catch { /* referral processing unavailable */ }
-      localStorage.removeItem("pending_referral_code");
-    }
-
-    return { error: null };
   };
 
   const signOut = async () => {
-    // Try Cloudflare Pages Function sign-out first
     try {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    } catch { /* Cloudflare signout unavailable */ }
-    // Also try Supabase sign-out
-    try {
-      if (isSupabaseConfigured) {
-        await supabase.auth.signOut();
-      }
-    } catch { /* Supabase signout unavailable */ }
+    } catch { /* ignore */ }
     setUser(null);
     setSession(null);
     setProfile(null);
-    // Clear any stale localStorage auth data
-    try {
-      const keys = Object.keys(localStorage);
-      for (const key of keys) {
-        if (key.startsWith("sb-") || key.includes("supabase")) {
-          localStorage.removeItem(key);
-        }
-      }
-    } catch { /* localStorage may be unavailable */ }
-    // Navigate to home
     window.location.href = "/";
   };
 

@@ -105,11 +105,11 @@ const DeveloperDashboard = () => {
         const { error: profileErr } = await supabase.from("profiles").insert({
           id: user.id,
           display_name:
-            (user.user_metadata as any)?.display_name ||
-            (user.user_metadata as any)?.full_name ||
+            (user as any).user_metadata?.display_name ||
+            (user as any).user_metadata?.full_name ||
             user.email?.split("@")[0] ||
             "User",
-          email_verified: !!user.email_confirmed_at,
+          email_verified: !!(user as any).email_confirmed_at,
         });
         if (profileErr && !profileErr.message?.includes("duplicate")) {
           console.error("Profile create failed:", profileErr);
