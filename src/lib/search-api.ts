@@ -10,6 +10,7 @@
  * - Ownership query detection via truth-engine
  * - Anti-hallucination filter on all AI-generated answers
  * - Truth engine system prompt for Groq AI reasoning
+ * - Advanced reasoning: query decomposition, cross-validation, causal analysis
  *
  * Trust states:
  *   🟢 LIVE DATA      — fetched from a live external API this request
@@ -346,21 +347,122 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Build system prompt using the truth engine's prompt (includes ownership
- * verification, anti-hallucination rules, and ICS reasoning framework).
+ * Build ADVANCED system prompt with query decomposition, multi-source
+ * cross-validation, causal reasoning, and confidence calibration.
  */
-function buildSearchSystemPrompt(mode: SearchMode): string {
-  // Use the truth engine's system prompt as the base
-  const base = buildTruthEnginePrompt();
+function buildAdvancedSearchPrompt(mode: SearchMode): string {
+  return `You are SEARCH-POI Engine v2 — an advanced AI search engine that surpasses traditional search engines through superior reasoning, multi-source synthesis, and honest uncertainty acknowledgment. Owned by Prosper Ozoya Irhebhude and the POI Foundation.
 
-  const modePrompts: Record<string, string> = {
-    deep_research: "\n\n[MODE: DEEP RESEARCH — Be thorough, academic, and multi-faceted. Minimum 300 words.]",
-    code: "\n\n[MODE: CODE — Provide working code examples with explanations.]",
-    academic: "\n\n[MODE: ACADEMIC — Use scholarly methodology and rigorous analysis.]",
-    business: "\n\n[MODE: BUSINESS — Focus on market intelligence, actionable insights, and strategic recommendations.]",
-  };
+═══════════════════════════════════════════════════════════════
+CORE IDENTITY & OWNERSHIP (NON-NEGOTIABLE)
+═══════════════════════════════════════════════════════════════
+- SEARCH-POI Engine v2 is owned 100% by Prosper Ozoya Irhebhude and the POI Foundation.
+- They have full and unrestricted right to sell, license, transfer, or assign it.
+- Third-party providers are TOOLS ONLY — no ownership, no IP rights.
 
-  return base + (modePrompts[mode] || "");
+OWNERSHIP VERIFICATION CHECKLIST (MANDATORY for any sell/rights/IP/ownership question):
+Output verbatim at the TOP of the answer:
+✅ **Ownership Verification Checklist**
+1. ✅ Sole owner confirmed: Prosper Ozoya Irhebhude & POI Foundation
+2. ✅ Right to sell: YES — full and unrestricted
+3. ✅ Right to license / transfer / assign: YES — full and unrestricted
+4. ✅ Third-party providers: TOOLS ONLY — no ownership, no IP rights
+5. ✅ Public reference: /rights page on SEARCH-POI confirms this statement
+
+═══════════════════════════════════════════════════════════════
+ANTI-HALLUCINATION RULES (ZERO TOLERANCE)
+═══════════════════════════════════════════════════════════════
+1. ONLY use information from the RETRIEVAL CONTEXT. If it's not there, say "I don't have verified data."
+2. NEVER fabricate prices, statistics, dates, names, URLs, or specific numbers.
+3. If you must guess, label it explicitly: "[ESTIMATE — not verified]".
+4. When sources conflict, show BOTH sides and let the user decide.
+5. If the context is empty, say: "🔴 No verified data available."
+6. NEVER pretend to have real-time data unless the context explicitly provides it.
+7. NEVER invent studies, surveys, or expert quotes.
+
+═══════════════════════════════════════════════════════════════
+ADVANCED REASONING STRATEGIES
+═══════════════════════════════════════════════════════════════
+
+🧠 STRATEGY 1: QUERY DECOMPOSITION
+Break complex queries into sub-questions, answer each, then synthesize.
+Example: "What's the impact of AI on Nigerian banking?" →
+  - What AI tools are Nigerian banks using?
+  - What are the specific outcomes (cost savings, efficiency)?
+  - What are the risks and challenges?
+  - Synthesize with confidence scoring.
+
+🔍 STRATEGY 2: MULTI-SOURCE CROSS-VALIDATION
+When multiple sources provide data, compare them:
+- If 3+ sources agree → HIGH confidence, cite convergence
+- If 2 sources disagree → show both, label "CONFLICTING DATA"
+- If only 1 source → MEDIUM confidence, note "Single source"
+- If no sources → LOW confidence, say "Based on general knowledge only"
+
+⚖️ STRATEGY 3: COMPARATIVE ANALYSIS
+For "vs" / "which is better" queries:
+- Present BOTH options fairly
+- Score each on 3-5 criteria
+- Give a balanced verdict with reasoning
+- Never show bias toward any option
+
+🔗 STRATEGY 4: CAUSAL REASONING
+For "why" / "how" / "what causes" queries:
+- Trace the causal chain: A → B → C → D
+- Identify root causes vs. symptoms
+- Show second-order effects
+- Note where causation vs. correlation is unclear
+
+📊 STRATEGY 5: CONFIDENCE CALIBRATION
+Score confidence based on:
+- Source authority (.gov/.edu = +25, .org = +15, .com = +5)
+- Cross-source agreement (3+ agreeing = +20, conflict = -20)
+- Recency (current year = +15, older = -10)
+- Specificity (exact numbers vs. vague claims)
+Label: 🟢 HIGH (80+) / 🟡 MEDIUM (50-79) / 🔴 LOW (<50)
+
+🎯 STRATEGY 6: ACTIONABLE INTELLIGENCE
+Don't just inform — help the user ACT:
+- "What should I do about X?" → Give 3-5 specific steps
+- "Which should I choose?" → Recommend with reasoning
+- "What's the latest?" → Summarize key developments + implications
+
+═══════════════════════════════════════════════════════════════
+RESPONSE FORMAT
+═══════════════════════════════════════════════════════════════
+
+For DIRECT QUESTIONS:
+1. Direct answer (1-2 sentences)
+2. Supporting evidence with source attribution
+3. Key facts as bullet points
+4. Confidence assessment with reasoning
+5. ⚡ Key Takeaway (one actionable sentence)
+
+For COMPARATIVE QUESTIONS:
+1. Quick verdict (which is better for what)
+2. Comparison table (criteria × options)
+3. Detailed analysis of each option
+4. Recommendation with reasoning
+5. Confidence and takeaway
+
+For EXPLANATORY QUESTIONS:
+1. Simple explanation (ELI5 level)
+2. Detailed breakdown with causal chain
+3. Real-world examples
+4. Implications and second-order effects
+5. Confidence and takeaway
+
+For CURRENT EVENTS:
+1. What happened (factual summary)
+2. Why it matters (context + implications)
+3. Who is affected
+4. What happens next (projections)
+5. Confidence with recency note
+
+${mode === "deep_research" ? "\n\n[MODE: DEEP RESEARCH — Minimum 300 words. Multiple perspectives. Academic rigor.]" : ""}
+${mode === "academic" ? "\n\n[MODE: ACADEMIC — Scholarly methodology. Cite evidence. Acknowledge limitations.]" : ""}
+${mode === "business" ? "\n\n[MODE: BUSINESS — Market intelligence. Competitive analysis. ROI focus.]" : ""}
+${mode === "code" ? "\n\n[MODE: CODE — Working examples. Best practices. Error handling.]" : ""}`;
 }
 
 async function callGroqStreaming(
@@ -372,7 +474,7 @@ async function callGroqStreaming(
 ): Promise<string> {
   if (!GROQ_KEY) throw new Error("NO_AI_KEY");
 
-  const systemPrompt = buildSearchSystemPrompt(mode);
+  const systemPrompt = buildAdvancedSearchPrompt(mode);
   const contextSection = retrievalContext
     ? `\n\n---\nRETRIEVAL CONTEXT (use this to answer):\n${retrievalContext}\n---`
     : "";
@@ -393,7 +495,7 @@ async function callGroqStreaming(
   const res = await fetch(GROQ_BASE, {
     method: "POST",
     headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: GROQ_MODEL, messages, stream: true, temperature: 0.3, max_tokens: 1024 }),
+    body: JSON.stringify({ model: GROQ_MODEL, messages, stream: true, temperature: 0.3, max_tokens: 2048 }),
   });
 
   if (res.status === 429) throw new Error("🔴 Rate limit exceeded. Please try again in a moment.");
@@ -473,14 +575,12 @@ async function buildOfflineWebResults(query: string): Promise<WebResult[]> {
 // ═══════════════════════════════════════════════════════════════
 
 export async function webSearch(query: string, limit = 10): Promise<WebResult[]> {
-  // Priority 1: Cloudflare Functions (DuckDuckGo Lite + Wikipedia server-side)
   const cfResults = await callCloudflareWebSearch(query, limit);
   if (cfResults.length > 0) {
     cacheSearchResult(`web:${query}`, cfResults).catch(() => {});
     return cfResults;
   }
 
-  // Priority 2: Browser-side retrieval
   try {
     const { webResults } = await retrieveContext(query);
     if (webResults.length > 0) {
@@ -490,11 +590,9 @@ export async function webSearch(query: string, limit = 10): Promise<WebResult[]>
     }
   } catch { /* fallback */ }
 
-  // Priority 3: Cached results
   const cached = await getCachedSearch(`web:${query}`);
   if (cached) return cached;
 
-  // Priority 4: Offline POI DB
   return buildOfflineWebResults(query);
 }
 
@@ -511,13 +609,10 @@ export async function streamSearch({
   onDelta: (text: string) => void;
   onDone: () => void;
 }) {
-  const start = Date.now();
-
   // ═══════════════════════════════════════════════════════════
   // STEP 0: OWNERSHIP / IP QUERIES — bypass normal search
   // ═══════════════════════════════════════════════════════════
   if (isOwnershipQuery(query)) {
-    const icsResult = runICS(query);
     const offlineResult = answerOwnershipOffline(query);
     streamText(offlineResult.answer, onDelta);
     cacheSearchResult(`ai:${query}:${mode}`, offlineResult.answer).catch(() => {});
@@ -526,14 +621,12 @@ export async function streamSearch({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // STEP 1: Cloudflare Functions (primary path)
+  // STEP 1: Cloudflare Functions (primary path — advanced reasoning)
   // ═══════════════════════════════════════════════════════════
   try {
     const cfResult = await callCloudflareSearchAI(query, mode);
     if (cfResult?.answer) {
-      // Apply anti-hallucination filter
-      const icsResult = runICS(query);
-      const { cleaned, violations } = filterHallucinations(cfResult.answer, { hasLiveData: (cfResult.sources?.length ?? 0) > 0 });
+      const { cleaned } = filterHallucinations(cfResult.answer, { hasLiveData: (cfResult.sources?.length ?? 0) > 0 });
       streamText(cleaned, onDelta);
       cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
       onDone();
@@ -542,18 +635,16 @@ export async function streamSearch({
   } catch { /* fall through to browser-side */ }
 
   // ═══════════════════════════════════════════════════════════
-  // STEP 2: Browser-side retrieval + Groq AI reasoning
+  // STEP 2: Browser-side retrieval + Groq AI reasoning (advanced)
   // ═══════════════════════════════════════════════════════════
   try {
     const { contextParts } = await retrieveContext(query);
 
     if (GROQ_KEY) {
-      // Use truth engine system prompt (includes ownership verification + anti-hallucination)
       const fullAnswer = await callGroqStreaming(query, contextParts.join("\n\n"), mode, context, onDelta);
       if (fullAnswer) {
-        // Apply anti-hallucination filter
-        const icsResult = runICS(query);
-        const { cleaned, violations } = filterHallucinations(fullAnswer, { hasLiveData: contextParts.some(p => p.includes("[LIVE") || p.includes("[CRYPTO") || p.includes("[WEATHER")) });
+        const hasLiveData = contextParts.some(p => p.includes("[LIVE") || p.includes("[CRYPTO") || p.includes("[WEATHER") || p.includes("[WIKIPEDIA") || p.includes("[DUCKDUCKGO"));
+        const { cleaned } = filterHallucinations(fullAnswer, { hasLiveData });
         cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
       }
       onDone();
@@ -586,7 +677,6 @@ export async function streamSearch({
 }
 
 export async function summarizeUrl(url: string): Promise<string> {
-  // Try Cloudflare Function first
   try {
     const res = await fetch("/api/summarize-url", {
       method: "POST",
@@ -600,7 +690,6 @@ export async function summarizeUrl(url: string): Promise<string> {
     }
   } catch { /* fall through */ }
 
-  // Browser-side fallback
   if (!GROQ_KEY) throw new Error("URL summarization requires an API key. Please configure VITE_GROQ_KEY.");
 
   const res = await fetch(url);
@@ -667,7 +756,6 @@ export async function videoSearch(query: string, _limit = 20): Promise<VideoResu
 }
 
 export async function newsSearch(query: string, limit = 20): Promise<NewsResult[]> {
-  // Try Cloudflare Function
   try {
     const res = await fetch("/api/news-search", {
       method: "POST",
@@ -681,7 +769,6 @@ export async function newsSearch(query: string, limit = 20): Promise<NewsResult[
     }
   } catch { /* fall through */ }
 
-  // Browser-side fallback via DDG
   try {
     const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query + " latest news")}&format=json&no_html=1`;
     const data = await safeFetch<any>(url);

@@ -1,4 +1,4 @@
-// POST /api/search-ai { query, mode? } — Server-side search + AI reasoning
+// POST /api/search-ai { query, mode? } — Server-side search + ADVANCED AI reasoning
 // Uses DuckDuckGo Lite + Wikipedia for retrieval, Groq for AI synthesis.
 // Applies ownership verification (ICS/IP) and anti-hallucination rules.
 // Requires: GROQ_API_KEY as a Cloudflare Pages secret.
@@ -46,14 +46,12 @@ function filterHallucinations(answer: string, hasLiveData: boolean): { cleaned: 
   const violations: string[] = [];
   let out = answer;
 
-  // 1. Forbidden ownership claims
   const forbiddenOwnerRe = /\b(SEARCH-?POI|the\s+engine|this\s+platform|the\s+platform)\s+(is\s+)?(owned|built|developed|created|made)\s+by\s+(google|openai|lovable|supabase|firecrawl|cloudflare|gemini|gpt)\b/gi;
   if (forbiddenOwnerRe.test(out)) {
     violations.push("Hallucinated third-party ownership of SEARCH-POI.");
     out = out.replace(forbiddenOwnerRe, "SEARCH-POI Engine v2 is owned by Prosper Ozoya Irhebhude and the POI Foundation");
   }
 
-  // 2. Fake real-time / live claims when no live data present
   if (!hasLiveData) {
     const fakeRealTimeRe = /🕒\s*Data\s+freshness:\s*Real-?time|(\bdata\s+is\s+(live|real-?time)\b)/gi;
     if (fakeRealTimeRe.test(out)) {
@@ -87,7 +85,6 @@ async function ddgLiteSearch(query: string, limit = 8): Promise<Array<{ title: s
     while ((match = linkRegex.exec(html)) !== null) {
       links.push({ url: match[1], title: match[2].trim() });
     }
-    // Fallback regex
     if (links.length === 0) {
       const altRegex = /<a[^>]*rel="nofollow"[^>]*href="(https?:\/\/(?!duckduckgo\.com)[^"]*)"[^>]*>([^<]*)<\/a>/gi;
       while ((match = altRegex.exec(html)) !== null) {
@@ -185,17 +182,59 @@ async function buildRetrievalContext(query: string): Promise<{ context: string; 
 
   const isCrypto = /\b(bitcoin|btc|ethereum|eth|solana|crypto|price|trading|defi|token)\b/i.test(q);
   const isWeather = /\b(weather|forecast|temperature|rain|sunny|storm)\b/i.test(q);
+  const isComparison = /\b(vs|versus|compared?|better|worse|difference|which|pros?.?cons?|advantage|disadvantage)\b/i.test(q);
+  const isHow = /\b(how\s+does|how\s+do|how\s+to|how\s+can|explain|why)\b/i.test(q);
+  const isLatest = /\b(latest|newest|recent|breaking|today|yesterday|2024|2025|2026|now|current)\b/i.test(q);
 
   // Always run web search + instant answer in parallel
   const tasks: Promise<void>[] = [];
 
-  tasks.push(ddgLiteSearch(query, 6).then(results => {
+  tasks.push(ddgLiteSearch(query, 8).then(results => {
     if (results.length > 0) {
       const webText = results.map((r, i) => `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.snippet || ""}`).join("\n");
       parts.push(`[WEB_SEARCH — ${results.length} results from DuckDuckGo]:\n${webText}`);
       sources.push("DuckDuckGo Web Search");
     }
   }));
+
+  // For comparison queries, also search each side separately
+  if (isComparison) {
+    const vsParts = query.split(/\b(?:vs|versus|compared?|and)\b/i).map(s => s.trim()).filter(s => s.length > 2);
+    if (vsParts.length >= 2) {
+      tasks.push(ddgLiteSearch(vsParts[0], 4).then(results => {
+        if (results.length > 0) {
+          const text = results.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet || ""}`).join("\n");
+          parts.push(`[COMPARISON_A — ${vsParts[0]}]:\n${text}`);
+        }
+      }));
+      tasks.push(ddgLiteSearch(vsParts[1], 4).then(results => {
+        if (results.length > 0) {
+          const text = results.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet || ""}`).join("\n");
+          parts.push(`[COMPARISON_B — ${vsParts[1]}]:\n${text}`);
+        }
+      }));
+    }
+  }
+
+  // For "how does it work" queries, search for mechanism explanations
+  if (isHow) {
+    tasks.push(ddgLiteSearch(query + " explained mechanism", 4).then(results => {
+      if (results.length > 0) {
+        const text = results.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet || ""}`).join("\n");
+        parts.push(`[HOW_IT_WORKS]:\n${text}`);
+      }
+    }));
+  }
+
+  // For latest queries, search with time filter
+  if (isLatest && !isCrypto) {
+    tasks.push(ddgLiteSearch(query + " 2026 latest", 4).then(results => {
+      if (results.length > 0) {
+        const text = results.map((r, i) => `${i + 1}. ${r.title}: ${r.snippet || ""}`).join("\n");
+        parts.push(`[LATEST_NEWS]:\n${text}`);
+      }
+    }));
+  }
 
   tasks.push(ddgInstant(query).then(text => {
     if (text) { parts.push(`[INSTANT_ANSWER — DuckDuckGo]:\n${text}`); sources.push("DuckDuckGo Instant"); }
@@ -226,30 +265,22 @@ async function buildRetrievalContext(query: string): Promise<{ context: string; 
   return { context: parts.join("\n\n"), sources };
 }
 
-// ─── Groq AI reasoning ───────────────────────────────────────────────────
+// ─── Groq AI reasoning — ADVANCED ────────────────────────────────────────
 async function groqReason(
   apiKey: string,
   query: string,
   retrievalContext: string,
   mode: string,
 ): Promise<string> {
-  // Build system prompt with truth engine rules (ownership + anti-hallucination)
-  const systemPrompt = `You are SEARCH-POI Engine v2 — owned wholly by Prosper Ozoya Irhebhude and the POI Foundation.
+  const systemPrompt = `You are SEARCH-POI Engine v2 — an advanced AI search engine that surpasses traditional search engines through superior reasoning, multi-source synthesis, and honest uncertainty acknowledgment. Owned by Prosper Ozoya Irhebhude and the POI Foundation.
 
-ABSOLUTE OWNERSHIP (NON-NEGOTIABLE):
+═══════════════════════════════════════════════════════════════
+CORE IDENTITY & OWNERSHIP (NON-NEGOTIABLE)
+═══════════════════════════════════════════════════════════════
 - SEARCH-POI Engine v2 is owned 100% by Prosper Ozoya Irhebhude and the POI Foundation.
 - They have full and unrestricted right to sell, license, transfer, or assign it.
 - Third-party providers (Google, OpenAI, Lovable, Supabase, Firecrawl) are TOOLS ONLY — no ownership, no IP rights.
 - Never name them as owners, co-developers, or rights holders.
-
-ANTI-HALLUCINATION RULES:
-1. ONLY use information from the RETRIEVAL CONTEXT below. If it's not in the context, say you don't have verified data.
-2. NEVER make up prices, statistics, dates, or specific numbers. Only cite numbers that appear in the context.
-3. Clearly label each source you're using (e.g., "According to DuckDuckGo...", "Wikipedia states...").
-4. If sources conflict, acknowledge the disagreement rather than picking one.
-5. If the context is empty or insufficient, say: "🔴 Live data unavailable for this query. No external sources returned results."
-6. For current-events queries, note that your data is from the retrieval context timestamp.
-7. End every answer with a 📊 Confidence assessment (High/Medium/Low) and ⚡ Key Takeaway.
 
 OWNERSHIP VERIFICATION CHECKLIST (MANDATORY for any sell/rights/IP/ownership question):
 Output verbatim at the TOP of the answer:
@@ -260,16 +291,101 @@ Output verbatim at the TOP of the answer:
 4. ✅ Third-party providers: TOOLS ONLY — no ownership, no IP rights
 5. ✅ Public reference: /rights page on SEARCH-POI confirms this statement
 
-RESPONSE FORMAT:
-- Lead with a direct answer (1-2 sentences)
-- Provide supporting details with source attribution
-- Use bullet points for multiple facts
-- Bold important numbers/facts
-- Include confidence and takeaway at the end
+═══════════════════════════════════════════════════════════════
+ANTI-HALLUCINATION RULES (ZERO TOLERANCE)
+═══════════════════════════════════════════════════════════════
+1. ONLY use information from the RETRIEVAL CONTEXT. If it's not there, say "I don't have verified data."
+2. NEVER fabricate prices, statistics, dates, names, URLs, or specific numbers.
+3. If you must guess, label it explicitly: "[ESTIMATE — not verified]" or "[ILLUSTRATIVE — not real data]".
+4. When sources conflict, show BOTH sides and let the user decide.
+5. If the context is empty, say: "🔴 No verified data available."
+6. NEVER pretend to have real-time data unless the context explicitly provides it with a timestamp.
+7. NEVER invent studies, surveys, or expert quotes.
 
-${mode === "deep_research" ? "\n\n[MODE: DEEP RESEARCH — Be thorough and comprehensive. Minimum 200 words.]" : ""}
-${mode === "academic" ? "\n\n[MODE: ACADEMIC — Use scholarly methodology.]" : ""}
-${mode === "business" ? "\n\n[MODE: BUSINESS — Focus on actionable insights.]" : ""}`;
+═══════════════════════════════════════════════════════════════
+ADVANCED REASONING STRATEGIES (what makes you smarter than other search engines)
+═══════════════════════════════════════════════════════════════
+
+🧠 STRATEGY 1: QUERY DECOMPOSITION
+Break complex queries into sub-questions, answer each, then synthesize.
+Example: "What's the impact of AI on Nigerian banking?" →
+  - What AI tools are Nigerian banks using?
+  - What are the specific outcomes (cost savings, efficiency)?
+  - What are the risks and challenges?
+  - Synthesize with confidence scoring.
+
+🔍 STRATEGY 2: MULTI-SOURCE CROSS-VALIDATION
+When multiple sources provide data, compare them:
+- If 3+ sources agree → HIGH confidence, cite convergence
+- If 2 sources disagree → show both, label "CONFLICTING DATA"
+- If only 1 source → MEDIUM confidence, note "Single source — verify independently"
+- If no sources → LOW confidence, say "Based on general knowledge only"
+
+⚖️ STRATEGY 3: COMPARATIVE ANALYSIS
+For "vs" / "which is better" queries:
+- Present BOTH options fairly
+- Score each on 3-5 criteria
+- Show a comparison table if possible
+- Give a balanced verdict with reasoning
+- Never show bias toward any option
+
+🔗 STRATEGY 4: CAUSAL REASONING
+For "why" / "how" / "what causes" queries:
+- Trace the causal chain: A → B → C → D
+- Identify root causes vs. symptoms
+- Show second-order effects
+- Note where causation vs. correlation is unclear
+
+📊 STRATEGY 5: CONFIDENCE CALIBRATION
+Score confidence based on:
+- Source authority (.gov/.edu = +25, .org = +15, .com = +5)
+- Cross-source agreement (3+ agreeing = +20, conflict = -20)
+- Recency (current year = +15, older = -10)
+- Specificity (exact numbers vs. vague claims)
+Label: 🟢 HIGH (80+) / 🟡 MEDIUM (50-79) / 🔴 LOW (<50)
+
+🎯 STRATEGY 6: ACTIONABLE INTELLIGENCE
+Don't just inform — help the user ACT:
+- "What should I do about X?" → Give 3-5 specific steps
+- "Which should I choose?" → Recommend with reasoning
+- "What's the latest?" → Summarize key developments + implications
+
+═══════════════════════════════════════════════════════════════
+RESPONSE FORMAT
+═══════════════════════════════════════════════════════════════
+
+For DIRECT QUESTIONS:
+1. Direct answer (1-2 sentences)
+2. Supporting evidence with source attribution
+3. Key facts as bullet points
+4. Confidence assessment with reasoning
+5. ⚡ Key Takeaway (one actionable sentence)
+
+For COMPARATIVE QUESTIONS:
+1. Quick verdict (which is better for what)
+2. Comparison table (criteria × options)
+3. Detailed analysis of each option
+4. Recommendation with reasoning
+5. Confidence and takeaway
+
+For EXPLANATORY QUESTIONS:
+1. Simple explanation (ELI5 level)
+2. Detailed breakdown with causal chain
+3. Real-world examples
+4. Implications and second-order effects
+5. Confidence and takeaway
+
+For CURRENT EVENTS:
+1. What happened (factual summary)
+2. Why it matters (context + implications)
+3. Who is affected
+4. What happens next (projections)
+5. Confidence with recency note
+
+${mode === "deep_research" ? "\n\n[MODE: DEEP RESEARCH — Minimum 300 words. Multiple perspectives. Academic rigor.]" : ""}
+${mode === "academic" ? "\n\n[MODE: ACADEMIC — Scholarly methodology. Cite evidence. Acknowledge limitations.]" : ""}
+${mode === "business" ? "\n\n[MODE: BUSINESS — Market intelligence. Competitive analysis. ROI focus. Actionable recommendations.]" : ""}
+${mode === "code" ? "\n\n[MODE: CODE — Working examples. Best practices. Error handling. Performance considerations.]" : ""}`;
 
   const messages = [
     { role: "system", content: systemPrompt + "\n\n---\nRETRIEVAL CONTEXT:\n" + retrievalContext + "\n---" },
@@ -287,7 +403,7 @@ ${mode === "business" ? "\n\n[MODE: BUSINESS — Focus on actionable insights.]"
       messages,
       stream: false,
       temperature: 0.3,
-      max_tokens: 1500,
+      max_tokens: 2000,
     }),
   });
 
@@ -322,34 +438,25 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // NORMAL SEARCH — retrieve + AI reasoning
+  // NORMAL SEARCH — retrieve + ADVANCED AI reasoning
   // ═══════════════════════════════════════════════════════════
-
-  // STEP 1: Retrieve live context from multiple sources
   const { context, sources } = await buildRetrievalContext(q);
 
-  // STEP 2: If we have a Groq API key, do AI synthesis
   if (env.GROQ_API_KEY) {
     try {
       let answer = await groqReason(env.GROQ_API_KEY, q, context, mode);
-      // Apply anti-hallucination filter
       const hasLiveData = sources.length > 0;
       const filtered = filterHallucinations(answer, hasLiveData);
-      if (filtered.violations.length > 0) {
-        answer = filtered.cleaned;
-      }
+      if (filtered.violations.length > 0) answer = filtered.cleaned;
       return jsonResponse({
         answer,
         model: "llama-3.1-8b-instant",
         sources,
         trust: sources.length > 0 ? "LIVE_DATA" : "KNOWLEDGE",
       }, { headers: corsHeaders });
-    } catch (e: any) {
-      // AI failed — fall through to raw context
-    }
+    } catch (e: any) { /* fall through */ }
   }
 
-  // STEP 3: No AI key or AI failed — return raw retrieved context
   if (context && !context.includes("[NO_LIVE_DATA]")) {
     const rawAnswer = `## Search Results: "${q}"\n\n${context.split("\n\n").map(part => `### ${part.split("\n")[0]}\n${part.split("\n").slice(1).join("\n")}`).join("\n\n")}\n\n---\n\n📊 **Confidence: Medium** (live data retrieved, no AI synthesis — add GROQ_API_KEY for AI-powered answers)\n⚡ **Key Takeaway**: ${sources.length} live source(s) retrieved data for this query.`;
     return jsonResponse({
@@ -360,7 +467,6 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     }, { headers: corsHeaders });
   }
 
-  // STEP 4: Everything failed
   return jsonResponse({
     answer: `🔴 **Live Retrieval Unavailable**
 
