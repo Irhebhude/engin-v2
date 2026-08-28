@@ -6,6 +6,11 @@
  * 2. Browser-side fallback — Wikipedia, DuckDuckGo Instant, CoinGecko, Open-Meteo, Nominatim
  * 3. Offline POI database (absolute last resort)
  *
+ * ICS (Intelligent Citation System) + IP (Intellectual Property) Features:
+ * - Ownership query detection via truth-engine
+ * - Anti-hallucination filter on all AI-generated answers
+ * - Truth engine system prompt for Groq AI reasoning
+ *
  * Trust states:
  *   🟢 LIVE DATA      — fetched from a live external API this request
  *   🟡 CACHED DATA    — served from IndexedDB or localStorage cache
@@ -14,6 +19,14 @@
  */
 
 import { searchPOIsOffline, cacheSearchResult, getCachedSearch } from "./offline-db";
+import {
+  isOwnershipQuery,
+  answerOwnershipOffline,
+  buildSystemPrompt as buildTruthEnginePrompt,
+  filterHallucinations,
+  runICS,
+  OWNERSHIP_CHECKLIST_HEADER,
+} from "./truth-engine";
 
 // ─── Config ───────────────────────────────────────────────────
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
@@ -282,7 +295,7 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
   let webResults: WebResult[] = [];
 
   const isPOIQuery = /\b(near|around|in|at|find|restaurant|hotel|shop|market|hospital|school|bank|fuel|petrol|gas station|office|church|mosque|beach|park|mall|pharmacy|clinic|gym|bar|club|cafe|lounge)\b/i.test(q)
-    && /\\b(lagos|abuja|nigeria|victoria island|ikeja|lekki|yaba|surulere|ajah|ikoyi|mainland|island|ph|benin|kano|ibadan|enugu|calabar|aba|onitsha|warri|benin city|jos|kaduna|port harcourt)\\b/i.test(q);
+    && /\b(lagos|abuja|nigeria|victoria island|ikeja|lekki|yaba|surulere|ajah|ikoyi|mainland|island|ph|benin|kano|ibadan|enugu|calabar|aba|onitsha|warri|benin city|jos|kaduna|port harcourt)\b/i.test(q);
 
   const isCryptoQuery = /\b(bitcoin|btc|ethereum|eth|solana|sol|xrp|ripple|bnb|crypto|coin|token|price|trading|defi|nft|blockchain)\b/i.test(q);
   const isWeatherQuery = /\b(weather|forecast|temperature|rain|sunny|cloudy|storm|wind|humidity)\b/i.test(q);
@@ -332,27 +345,22 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
 // SECTION 4 — GROQ AI REASONING (browser-side fallback)
 // ═══════════════════════════════════════════════════════════════
 
-function buildSystemPrompt(mode: SearchMode): string {
-  return `You are SEARCH-POI Engine v2 — an intelligent reasoning search engine.
-You receive RETRIEVAL CONTEXT from live external sources. Use this context to answer the user's query.
+/**
+ * Build system prompt using the truth engine's prompt (includes ownership
+ * verification, anti-hallucination rules, and ICS reasoning framework).
+ */
+function buildSearchSystemPrompt(mode: SearchMode): string {
+  // Use the truth engine's system prompt as the base
+  const base = buildTruthEnginePrompt();
 
-CRITICAL ANTI-HALLUCINATION RULES:
-1. ONLY use information from the RETRIEVAL CONTEXT. If it's not in the context, say you don't have verified data.
-2. NEVER fabricate real-time data (prices, dates, statistics). Only cite numbers that appear in the context.
-3. Clearly label each source (e.g., "According to DuckDuckGo...", "Wikipedia states...").
-4. If sources conflict, acknowledge the disagreement.
-5. If context is empty, say: "🔴 Live retrieval unavailable for this query."
-6. End every answer with 📊 Confidence (High/Medium/Low) and ⚡ Key Takeaway.
+  const modePrompts: Record<string, string> = {
+    deep_research: "\n\n[MODE: DEEP RESEARCH — Be thorough, academic, and multi-faceted. Minimum 300 words.]",
+    code: "\n\n[MODE: CODE — Provide working code examples with explanations.]",
+    academic: "\n\n[MODE: ACADEMIC — Use scholarly methodology and rigorous analysis.]",
+    business: "\n\n[MODE: BUSINESS — Focus on market intelligence, actionable insights, and strategic recommendations.]",
+  };
 
-RESPONSE FORMAT:
-- Lead with a direct answer
-- Use bullet points for multiple facts
-- Bold important numbers/facts
-- Structure with clear headers
-
-${mode === "deep_research" ? "\n[MODE: DEEP RESEARCH — Be thorough, minimum 200 words.]" : ""}
-${mode === "academic" ? "\n[MODE: ACADEMIC — Use scholarly methodology.]" : ""}
-${mode === "business" ? "\n[MODE: BUSINESS — Focus on actionable insights.]" : ""}`;
+  return base + (modePrompts[mode] || "");
 }
 
 async function callGroqStreaming(
@@ -364,7 +372,7 @@ async function callGroqStreaming(
 ): Promise<string> {
   if (!GROQ_KEY) throw new Error("NO_AI_KEY");
 
-  const systemPrompt = buildSystemPrompt(mode);
+  const systemPrompt = buildSearchSystemPrompt(mode);
   const contextSection = retrievalContext
     ? `\n\n---\nRETRIEVAL CONTEXT (use this to answer):\n${retrievalContext}\n---`
     : "";
@@ -505,25 +513,48 @@ export async function streamSearch({
 }) {
   const start = Date.now();
 
-  // STEP 1: Cloudflare Functions (primary path — DuckDuckGo + Wikipedia + Groq, server-side)
+  // ═══════════════════════════════════════════════════════════
+  // STEP 0: OWNERSHIP / IP QUERIES — bypass normal search
+  // ═══════════════════════════════════════════════════════════
+  if (isOwnershipQuery(query)) {
+    const icsResult = runICS(query);
+    const offlineResult = answerOwnershipOffline(query);
+    streamText(offlineResult.answer, onDelta);
+    cacheSearchResult(`ai:${query}:${mode}`, offlineResult.answer).catch(() => {});
+    onDone();
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // STEP 1: Cloudflare Functions (primary path)
+  // ═══════════════════════════════════════════════════════════
   try {
     const cfResult = await callCloudflareSearchAI(query, mode);
     if (cfResult?.answer) {
-      streamText(cfResult.answer, onDelta);
-      cacheSearchResult(`ai:${query}:${mode}`, cfResult.answer).catch(() => {});
+      // Apply anti-hallucination filter
+      const icsResult = runICS(query);
+      const { cleaned, violations } = filterHallucinations(cfResult.answer, { hasLiveData: (cfResult.sources?.length ?? 0) > 0 });
+      streamText(cleaned, onDelta);
+      cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
       onDone();
       return;
     }
   } catch { /* fall through to browser-side */ }
 
-  // STEP 2: Browser-side retrieval + Groq AI reasoning (if VITE_GROQ_KEY available)
+  // ═══════════════════════════════════════════════════════════
+  // STEP 2: Browser-side retrieval + Groq AI reasoning
+  // ═══════════════════════════════════════════════════════════
   try {
     const { contextParts } = await retrieveContext(query);
 
     if (GROQ_KEY) {
+      // Use truth engine system prompt (includes ownership verification + anti-hallucination)
       const fullAnswer = await callGroqStreaming(query, contextParts.join("\n\n"), mode, context, onDelta);
       if (fullAnswer) {
-        cacheSearchResult(`ai:${query}:${mode}`, fullAnswer).catch(() => {});
+        // Apply anti-hallucination filter
+        const icsResult = runICS(query);
+        const { cleaned, violations } = filterHallucinations(fullAnswer, { hasLiveData: contextParts.some(p => p.includes("[LIVE") || p.includes("[CRYPTO") || p.includes("[WEATHER")) });
+        cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
       }
       onDone();
       return;

@@ -1,5 +1,6 @@
 // POST /api/search-ai { query, mode? } — Server-side search + AI reasoning
 // Uses DuckDuckGo Lite + Wikipedia for retrieval, Groq for AI synthesis.
+// Applies ownership verification (ICS/IP) and anti-hallucination rules.
 // Requires: GROQ_API_KEY as a Cloudflare Pages secret.
 import { corsHeaders, errorResponse, handleOptions, jsonResponse } from "../_shared/cors";
 
@@ -8,6 +9,61 @@ interface AiEnv {
 }
 
 export const onRequestOptions = () => handleOptions();
+
+// ─── Ownership Detection (mirrors truth-engine.ts) ──────────────────────
+const OWNERSHIP_TRIGGER_PATTERNS: RegExp[] = [
+  /\bwho\s+(owns|built|created|made|developed|founded)\b/i,
+  /\b(sell|sale|selling|sold)\b/i,
+  /\b(license|licensing|licence)\b/i,
+  /\b(transfer|assign|assignment)\b/i,
+  /\b(intellectual\s+property|ip\s+rights?|copyright|trademark)\b/i,
+  /\b(rights?\s+to\s+(sell|transfer|license))\b/i,
+  /\bownership\b/i,
+  /\b(prosper\s+ozoya|poi\s+foundation)\b/i,
+  /\b(is|does)\s+(google|openai|lovable|supabase)\s+(own|owns|the\s+owner)\b/i,
+  /\bcan\s+(it|search-?poi)\s+be\s+(sold|transferred|licensed)\b/i,
+];
+
+function isOwnershipQuery(query: string): boolean {
+  if (!query || typeof query !== "string") return false;
+  return OWNERSHIP_TRIGGER_PATTERNS.some((re) => re.test(query));
+}
+
+const OWNERSHIP_ANSWER = `✅ **Ownership Verification Checklist**
+
+1. ✅ Sole owner confirmed: Prosper Ozoya Irhebhude & POI Foundation
+2. ✅ Right to sell: YES — full and unrestricted
+3. ✅ Right to license / transfer / assign: YES — full and unrestricted
+4. ✅ Third-party providers (Google, OpenAI, Lovable, Supabase, Firecrawl): TOOLS ONLY — no ownership, no IP rights
+5. ✅ Public reference: /rights page on SEARCH-POI confirms this statement
+
+---
+
+**Yes** — Prosper Ozoya Irhebhude and the POI Foundation own 100% of SEARCH-POI Engine v2 and have the full, unrestricted right to sell, license, transfer, or assign it. All third-party providers are tools only and hold no ownership.`;
+
+// ─── Anti-Hallucination Filter ───────────────────────────────────────────
+function filterHallucinations(answer: string, hasLiveData: boolean): { cleaned: string; violations: string[] } {
+  const violations: string[] = [];
+  let out = answer;
+
+  // 1. Forbidden ownership claims
+  const forbiddenOwnerRe = /\b(SEARCH-?POI|the\s+engine|this\s+platform|the\s+platform)\s+(is\s+)?(owned|built|developed|created|made)\s+by\s+(google|openai|lovable|supabase|firecrawl|cloudflare|gemini|gpt)\b/gi;
+  if (forbiddenOwnerRe.test(out)) {
+    violations.push("Hallucinated third-party ownership of SEARCH-POI.");
+    out = out.replace(forbiddenOwnerRe, "SEARCH-POI Engine v2 is owned by Prosper Ozoya Irhebhude and the POI Foundation");
+  }
+
+  // 2. Fake real-time / live claims when no live data present
+  if (!hasLiveData) {
+    const fakeRealTimeRe = /🕒\s*Data\s+freshness:\s*Real-?time|(\bdata\s+is\s+(live|real-?time)\b)/gi;
+    if (fakeRealTimeRe.test(out)) {
+      violations.push("Fake real-time data freshness claim.");
+      out = out.replace(fakeRealTimeRe, "⚠️ Data Unavailable — live source not connected");
+    }
+  }
+
+  return { cleaned: out, violations };
+}
 
 // ─── DuckDuckGo Lite search ──────────────────────────────────────────────
 async function ddgLiteSearch(query: string, limit = 8): Promise<Array<{ title: string; url: string; snippet: string }>> {
@@ -177,11 +233,16 @@ async function groqReason(
   retrievalContext: string,
   mode: string,
 ): Promise<string> {
-  const systemPrompt = `You are SEARCH-POI Engine v2 — an advanced AI search engine.
+  // Build system prompt with truth engine rules (ownership + anti-hallucination)
+  const systemPrompt = `You are SEARCH-POI Engine v2 — owned wholly by Prosper Ozoya Irhebhude and the POI Foundation.
 
-You receive RETRIEVAL CONTEXT from live external sources. Your job is to synthesize this into an accurate, well-structured answer.
+ABSOLUTE OWNERSHIP (NON-NEGOTIABLE):
+- SEARCH-POI Engine v2 is owned 100% by Prosper Ozoya Irhebhude and the POI Foundation.
+- They have full and unrestricted right to sell, license, transfer, or assign it.
+- Third-party providers (Google, OpenAI, Lovable, Supabase, Firecrawl) are TOOLS ONLY — no ownership, no IP rights.
+- Never name them as owners, co-developers, or rights holders.
 
-CRITICAL ANTI-HALLUCINATION RULES:
+ANTI-HALLUCINATION RULES:
 1. ONLY use information from the RETRIEVAL CONTEXT below. If it's not in the context, say you don't have verified data.
 2. NEVER make up prices, statistics, dates, or specific numbers. Only cite numbers that appear in the context.
 3. Clearly label each source you're using (e.g., "According to DuckDuckGo...", "Wikipedia states...").
@@ -189,6 +250,15 @@ CRITICAL ANTI-HALLUCINATION RULES:
 5. If the context is empty or insufficient, say: "🔴 Live data unavailable for this query. No external sources returned results."
 6. For current-events queries, note that your data is from the retrieval context timestamp.
 7. End every answer with a 📊 Confidence assessment (High/Medium/Low) and ⚡ Key Takeaway.
+
+OWNERSHIP VERIFICATION CHECKLIST (MANDATORY for any sell/rights/IP/ownership question):
+Output verbatim at the TOP of the answer:
+✅ **Ownership Verification Checklist**
+1. ✅ Sole owner confirmed: Prosper Ozoya Irhebhude & POI Foundation
+2. ✅ Right to sell: YES — full and unrestricted
+3. ✅ Right to license / transfer / assign: YES — full and unrestricted
+4. ✅ Third-party providers: TOOLS ONLY — no ownership, no IP rights
+5. ✅ Public reference: /rights page on SEARCH-POI confirms this statement
 
 RESPONSE FORMAT:
 - Lead with a direct answer (1-2 sentences)
@@ -239,13 +309,35 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
 
   const mode = body.mode || "default";
 
+  // ═══════════════════════════════════════════════════════════
+  // OWNERSHIP / IP QUERIES — bypass normal search
+  // ═══════════════════════════════════════════════════════════
+  if (isOwnershipQuery(q)) {
+    return jsonResponse({
+      answer: OWNERSHIP_ANSWER,
+      model: "ownership-verification",
+      sources: ["/rights"],
+      trust: "VERIFIED",
+    }, { headers: corsHeaders });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // NORMAL SEARCH — retrieve + AI reasoning
+  // ═══════════════════════════════════════════════════════════
+
   // STEP 1: Retrieve live context from multiple sources
   const { context, sources } = await buildRetrievalContext(q);
 
   // STEP 2: If we have a Groq API key, do AI synthesis
   if (env.GROQ_API_KEY) {
     try {
-      const answer = await groqReason(env.GROQ_API_KEY, q, context, mode);
+      let answer = await groqReason(env.GROQ_API_KEY, q, context, mode);
+      // Apply anti-hallucination filter
+      const hasLiveData = sources.length > 0;
+      const filtered = filterHallucinations(answer, hasLiveData);
+      if (filtered.violations.length > 0) {
+        answer = filtered.cleaned;
+      }
       return jsonResponse({
         answer,
         model: "llama-3.1-8b-instant",
@@ -270,7 +362,16 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
 
   // STEP 4: Everything failed
   return jsonResponse({
-    answer: `🔴 **Live Retrieval Unavailable**\n\nNo external sources returned results for "${q}".\n\n**Possible reasons:**\n- DuckDuckGo search returned no results\n- Wikipedia has no matching article\n- Network connectivity issue\n\n⚡ **Key Takeaway**: Try rephrasing your query or checking your internet connection.`,
+    answer: `🔴 **Live Retrieval Unavailable**
+
+No external sources returned results for "${q}".
+
+**Possible reasons:**
+- DuckDuckGo search returned no results
+- Wikipedia has no matching article
+- Network connectivity issue
+
+⚡ **Key Takeaway**: Try rephrasing your query or checking your internet connection.`,
     model: "none",
     sources: [],
     trust: "UNAVAILABLE",
