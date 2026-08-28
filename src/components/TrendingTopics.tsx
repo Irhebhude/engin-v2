@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { TrendingUp, Flame, ArrowRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 interface TrendingItem {
   query: string;
@@ -15,25 +15,36 @@ const TrendingTopics = () => {
   const [trending, setTrending] = useState<TrendingItem[]>([]);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const fetchTrending = async () => {
-      const { data } = await supabase
-        .from("trending_searches" as any)
-        .select("query, search_count, last_searched_at")
-        .order("search_count", { ascending: false })
-        .limit(8);
-      if (data) setTrending(data as any);
+      try {
+        const { data } = await supabase
+          .from("trending_searches" as any)
+          .select("query, search_count, last_searched_at")
+          .order("search_count", { ascending: false })
+          .limit(8);
+        if (data) setTrending(data as any);
+      } catch {
+        // Supabase unavailable or table doesn't exist
+      }
     };
     fetchTrending();
 
     // Real-time updates
-    const channel = supabase
-      .channel("trending-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "trending_searches" }, () => {
-        fetchTrending();
-      })
-      .subscribe();
+    let channel: any;
+    try {
+      channel = supabase
+        .channel("trending-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "trending_searches" }, () => {
+          fetchTrending();
+        })
+        .subscribe();
+    } catch {
+      // Realtime subscription failed
+    }
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
   if (trending.length === 0) return null;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface Profile {
@@ -24,6 +24,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, displayName: string, referralCode?: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   toggleLiteMode: () => Promise<void>;
@@ -44,12 +45,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) setProfile(data as unknown as Profile);
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (data) setProfile(data as unknown as Profile);
+    } catch {
+      // Profile table may not exist or Supabase may be unreachable
+    }
   };
 
   const refreshProfile = async () => {
@@ -59,11 +65,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const toggleLiteMode = async () => {
     if (!user || !profile) return;
     const newVal = !profile.lite_mode;
-    await supabase.from("profiles").update({ lite_mode: newVal } as any).eq("id", user.id);
+    try {
+      await supabase.from("profiles").update({ lite_mode: newVal } as any).eq("id", user.id);
+    } catch { /* Supabase unavailable */ }
     setProfile((p) => p ? { ...p, lite_mode: newVal } : p);
   };
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -82,12 +95,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string, referralCode?: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: "Authentication is not configured. Please contact the administrator." };
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -100,7 +118,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (referralCode && data.user) {
       setTimeout(async () => {
-        await supabase.rpc("process_referral", { referral_code_input: referralCode });
+        try {
+          await supabase.rpc("process_referral", { referral_code_input: referralCode });
+        } catch { /* referral processing unavailable */ }
       }, 1000);
     }
 
@@ -108,27 +128,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: "Authentication is not configured. Please contact the administrator." };
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
 
     const pendingCode = localStorage.getItem("pending_referral_code");
     if (pendingCode) {
-      await supabase.rpc("process_referral", { referral_code_input: pendingCode });
+      try {
+        await supabase.rpc("process_referral", { referral_code_input: pendingCode });
+      } catch { /* referral processing unavailable */ }
       localStorage.removeItem("pending_referral_code");
     }
 
     return { error: null };
   };
 
+  const signInWithGoogle = async () => {
+    if (!isSupabaseConfigured) {
+      return { error: "Authentication is not configured. Please contact the administrator." };
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    } catch { /* signout may fail if Supabase is down */ }
     setUser(null);
     setSession(null);
     setProfile(null);
+    // Clear any stale localStorage auth data
+    try {
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (key.startsWith("sb-") || key.includes("supabase")) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch { /* localStorage may be unavailable */ }
+    // Navigate to home
+    window.location.href = "/";
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile, toggleLiteMode }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, refreshProfile, toggleLiteMode }}>
       {children}
     </AuthContext.Provider>
   );

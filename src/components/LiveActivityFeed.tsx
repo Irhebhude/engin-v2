@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Activity, Search, Zap } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 interface ActivityItem {
   id: string;
@@ -15,33 +15,58 @@ const LiveActivityFeed = () => {
   const [liveCount, setLiveCount] = useState(0);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     // Fetch recent activity
     const fetchRecent = async () => {
-      const { data } = await supabase
-        .from("search_activity" as any)
-        .select("id, query, search_mode, created_at")
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (data) setActivities(data as any);
+      try {
+        const { data } = await supabase
+          .from("search_activity" as any)
+          .select("id, query, search_mode, created_at")
+          .order("created_at", { ascending: false })
+          .limit(8);
+        if (data) setActivities(data as any);
+      } catch {
+        // Supabase unavailable or table doesn't exist
+      }
     };
     fetchRecent();
 
     // Realtime subscription
-    const channel = supabase
-      .channel("live-search-activity")
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "search_activity",
-      }, (payload) => {
-        const newItem = payload.new as ActivityItem;
-        setActivities(prev => [newItem, ...prev].slice(0, 8));
-        setLiveCount(c => c + 1);
-      })
-      .subscribe();
+    let channel: any;
+    try {
+      channel = supabase
+        .channel("live-search-activity")
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "search_activity",
+        }, (payload) => {
+          const newItem = payload.new as ActivityItem;
+          setActivities(prev => [newItem, ...prev].slice(0, 8));
+          setLiveCount(c => c + 1);
+        })
+        .subscribe();
+    } catch {
+      // Realtime subscription failed
+    }
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="glass rounded-2xl border border-border/30 overflow-hidden">
+        <div className="p-4 border-b border-border/30 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-muted-foreground">Live Activity</h3>
+        </div>
+        <div className="p-6 text-center text-sm text-muted-foreground">
+          Live activity feed requires a connected backend.
+        </div>
+      </div>
+    );
+  }
 
   const timeAgo = (dateStr: string) => {
     const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);

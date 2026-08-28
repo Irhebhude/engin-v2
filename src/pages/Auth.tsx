@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
   const referralCode = searchParams.get("ref") || "";
@@ -202,13 +202,17 @@ const Auth = () => {
           <div className="flex-1 h-px bg-border/40" />
         </div>
 
-        {/* Google OAuth — Cloudflare Workers flow (/api/auth/google/start) */}
+        {/* Google OAuth via Supabase */}
         <button
           type="button"
           disabled={loading}
-          onClick={() => {
-            const redirect = encodeURIComponent(searchParams.get("redirect") || "/");
-            window.location.href = `/api/auth/google/start?redirect=${redirect}`;
+          onClick={async () => {
+            setLoading(true);
+            const { error } = await signInWithGoogle();
+            if (error) {
+              toast({ title: "Google Sign-In Failed", description: error, variant: "destructive" });
+              setLoading(false);
+            }
           }}
           className="w-full py-2.5 rounded-xl border border-border/30 bg-secondary/50 text-foreground font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >

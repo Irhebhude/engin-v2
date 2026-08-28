@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Clock, AlertCircle, Globe, Image, Video, Newspaper, Cpu, Hammer, MapPin, Brain, Shield, FileText } from "lucide-react";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import SearchBar from "@/components/SearchBar";
 import AIAnswer from "@/components/AIAnswer";
 import WebSearchResults from "@/components/WebSearchResults";
@@ -95,9 +95,9 @@ const SearchResults = () => {
       if (!zkOn) addSearchToHistory(q, searchMode);
       const recentContext = zkOn ? [] : getRecentQueries(5);
 
-      if (!zkOn) {
-        supabase.rpc("increment_search_count" as any).then(() => {});
-        supabase.rpc("log_search_activity" as any, { search_query: q, search_mode: searchMode }).then(() => {});
+      if (!zkOn && isSupabaseConfigured) {
+        try { void supabase.rpc("increment_search_count" as any); } catch {}
+        try { void supabase.rpc("log_search_activity" as any, { search_query: q, search_mode: searchMode }); } catch {}
       }
 
       const aiPromise = (async () => {
