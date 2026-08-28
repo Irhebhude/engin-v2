@@ -1,14 +1,12 @@
 /**
  * SEARCH-POI Engine v2 — Unified Search Pipeline
  *
- * Search priority:
- * 1. Cloudflare Pages Functions (/api/search-ai, /api/web-search) — server-side Gemini + Firecrawl
- * 2. Browser-side live APIs — DuckDuckGo, Wikipedia, CoinGecko, Open-Meteo, Nominatim
- * 3. Groq AI reasoning (if VITE_GROQ_KEY available)
- * 4. Raw retrieved context (if no AI key)
- * 5. Offline POI database (absolute last resort)
+ * Architecture:
+ * 1. Cloudflare Pages Functions (/api/search-ai) — server-side DuckDuckGo + Wikipedia + Groq AI
+ * 2. Browser-side fallback — Wikipedia, DuckDuckGo Instant, CoinGecko, Open-Meteo, Nominatim
+ * 3. Offline POI database (absolute last resort)
  *
- * Trust-state indicators:
+ * Trust states:
  *   🟢 LIVE DATA      — fetched from a live external API this request
  *   🟡 CACHED DATA    — served from IndexedDB or localStorage cache
  *   🔵 KNOWLEDGE      — from model training data or offline POI DB
@@ -81,11 +79,21 @@ async function safeFetch<T>(url: string, init?: RequestInit): Promise<T | null> 
 
 function now() { return Date.now(); }
 
+function streamText(text: string, onDelta: (text: string) => void): void {
+  const chunks = text.match(/.{1,12}/gs) || [text];
+  for (const c of chunks) {
+    onDelta(c);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
-// SECTION 1 — CLOUDFLARE PAGES FUNCTIONS (server-side, best quality)
+// SECTION 1 — CLOUDFLARE PAGES FUNCTIONS (primary path)
 // ═══════════════════════════════════════════════════════════════
 
-async function callCloudflareSearchAI(query: string, mode: SearchMode): Promise<string | null> {
+async function callCloudflareSearchAI(
+  query: string,
+  mode: SearchMode,
+): Promise<{ answer: string; sources?: string[]; trust?: string } | null> {
   try {
     const res = await fetch("/api/search-ai", {
       method: "POST",
@@ -95,7 +103,10 @@ async function callCloudflareSearchAI(query: string, mode: SearchMode): Promise<
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.answer || null;
+    if (data?.answer) {
+      return { answer: data.answer, sources: data.sources, trust: data.trust };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -113,9 +124,9 @@ async function callCloudflareWebSearch(query: string, limit = 10): Promise<WebRe
     const data = await res.json();
     const results = data?.results || [];
     return results.map((r: any) => ({
-      url: r.url || r.metadata?.sourceURL || "",
-      title: r.title || r.metadata?.title || "",
-      description: r.description || r.markdown?.slice(0, 200) || "",
+      url: r.url || "",
+      title: r.title || "",
+      description: r.description || r.snippet || "",
       markdown: r.markdown || "",
     }));
   } catch {
@@ -124,35 +135,8 @@ async function callCloudflareWebSearch(query: string, limit = 10): Promise<WebRe
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 2 — BROWSER-SIDE LIVE RETRIEVAL (free APIs, no keys)
+// SECTION 2 — BROWSER-SIDE FALLBACK RETRIEVAL
 // ═══════════════════════════════════════════════════════════════
-
-async function retrieveFromDDG(query: string): Promise<{ answer: string; sources: SourceMeta[] }> {
-  const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-  const data = await safeFetch<any>(url);
-  if (!data) return { answer: "", sources: [{ name: "DuckDuckGo", type: "unavailable", fetchedAt: now(), reason: "Request failed" }] };
-
-  const parts: string[] = [];
-  const src: SourceMeta[] = [{ name: "DuckDuckGo Instant", url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`, type: "live", fetchedAt: now() }];
-
-  if (data.AbstractText) {
-    parts.push(`**${data.Heading || query}**: ${data.AbstractText}`);
-    if (data.AbstractURL) src[0].url = data.AbstractURL;
-  }
-  if (data.Answer) {
-    parts.push(`**Direct Answer**: ${data.Answer}`);
-  }
-  if (data.RelatedTopics?.length) {
-    const related = data.RelatedTopics
-      .filter((t: any) => t.Text && !t.FirstURL?.includes("duckduckgo.com"))
-      .slice(0, 4)
-      .map((t: any) => `- ${t.Text}`)
-      .join("\n");
-    if (related) parts.push(`**Related**: \n${related}`);
-  }
-
-  return { answer: parts.join("\n\n"), sources: src };
-}
 
 async function retrieveFromWikipedia(query: string): Promise<{ answer: string; sources: SourceMeta[] }> {
   const topic = encodeURIComponent(query.replace(/[?!.]/g, "").trim());
@@ -184,6 +168,25 @@ async function retrieveFromWikipedia(query: string): Promise<{ answer: string; s
   return { answer: "", sources: [{ name: "Wikipedia", type: "unavailable", fetchedAt: now(), reason: "No extract available" }] };
 }
 
+async function retrieveFromDDG(query: string): Promise<{ answer: string; sources: SourceMeta[] }> {
+  const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+  const data = await safeFetch<any>(url);
+  if (!data) return { answer: "", sources: [{ name: "DuckDuckGo", type: "unavailable", fetchedAt: now(), reason: "Request failed" }] };
+
+  const parts: string[] = [];
+  const src: SourceMeta[] = [{ name: "DuckDuckGo Instant", url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`, type: "live", fetchedAt: now() }];
+
+  if (data.AbstractText) {
+    parts.push(`**${data.Heading || query}**: ${data.AbstractText}`);
+    if (data.AbstractURL) src[0].url = data.AbstractURL;
+  }
+  if (data.Answer) {
+    parts.push(`**Direct Answer**: ${data.Answer}`);
+  }
+
+  return { answer: parts.join("\n\n"), sources: src };
+}
+
 async function retrieveCryptoPrices(): Promise<{ answer: string; sources: SourceMeta[] }> {
   const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,binancecoin&vs_currencies=usd,ngn&include_24hr_change=true";
   const data = await safeFetch<any>(url);
@@ -196,13 +199,13 @@ async function retrieveCryptoPrices(): Promise<{ answer: string; sources: Source
     const d = data[id];
     if (!d) continue;
     const usd = d.usd ? `$${d.usd.toLocaleString()}` : "N/A";
-    const ngn = d.ngn ? `₦${d.ngn.toLocaleString()}` : "";
-    const change = d.usd_24h_change ? `${d.usd_24h_change > 0 ? "+" : ""}${d.usd_24h_change.toFixed(1)}%` : "";
-    lines.push(`- **${name}**: ${usd}${ngn ? ` / ${ngn}` : ""}${change ? ` (${change} 24h)` : ""}`);
+    const ngn = d.ngn ? ` / ₦${d.ngn.toLocaleString()}` : "";
+    const change = d.usd_24h_change ? ` (${d.usd_24h_change > 0 ? "+" : ""}${d.usd_24h_change.toFixed(1)}% 24h)` : "";
+    lines.push(`- **${name}**: ${usd}${ngn}${change}`);
   }
 
   return {
-    answer: `**Live Crypto Prices** (CoinGecko):\n${lines.join("\n")}\n\n🕐 *Prices updated just now — these are live market rates.*`,
+    answer: `**Live Crypto Prices** (CoinGecko):\n${lines.join("\n")}\n\n🕐 *Prices updated just now — live market rates.*`,
     sources: [{ name: "CoinGecko", url: "https://www.coingecko.com", type: "live", fetchedAt: now() }],
   };
 }
@@ -215,11 +218,10 @@ async function retrieveWeather(lat: number, lon: number, label?: string): Promis
   const cw = data.current_weather;
   const wmoMap: Record<number, string> = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-    45: "Fog", 48: "Rime fog", 51: "Light drizzle", 53: "Moderate drizzle",
-    55: "Dense drizzle", 61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
-    71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
-    80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
-    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail",
+    45: "Fog", 51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+    61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+    80: "Rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail",
   };
   const weather = wmoMap[cw.weathercode] || `Code ${cw.weathercode}`;
   const maxTemp = data.daily?.temperature_2m_max?.[0];
@@ -228,7 +230,6 @@ async function retrieveWeather(lat: number, lon: number, label?: string): Promis
   let answer = `**Current Weather${label ? ` — ${label}` : ""}** (Open-Meteo):\n`;
   answer += `- Temperature: **${cw.temperature}°C** (wind: ${cw.windspeed} km/h)\n`;
   answer += `- Conditions: **${weather}**\n`;
-  answer += `- Wind: ${cw.windspeed} km/h from ${cw.winddirection}°\n`;
   if (maxTemp != null && minTemp != null) {
     answer += `- Today: High ${maxTemp}°C / Low ${minTemp}°C\n`;
   }
@@ -265,7 +266,7 @@ async function retrievePOIs(query: string): Promise<{ answer: string; webResults
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 3 — RETRIEVAL ROUTER
+// SECTION 3 — BROWSER-SIDE RETRIEVAL ORCHESTRATOR
 // ═══════════════════════════════════════════════════════════════
 
 interface RetrievalContext {
@@ -281,11 +282,10 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
   let webResults: WebResult[] = [];
 
   const isPOIQuery = /\b(near|around|in|at|find|restaurant|hotel|shop|market|hospital|school|bank|fuel|petrol|gas station|office|church|mosque|beach|park|mall|pharmacy|clinic|gym|bar|club|cafe|lounge)\b/i.test(q)
-    && /\b(lagos|abuja|nigeria|victoria island|ikeja|lekki|yaba|surulere|ajah|ikoyi|mainland|island|ph|benin|kano|ibadan|enugu|calabar|aba|onitsha|warri|benin city|jos|kaduna|port harcourt)\b/i.test(q);
+    && /\\b(lagos|abuja|nigeria|victoria island|ikeja|lekki|yaba|surulere|ajah|ikoyi|mainland|island|ph|benin|kano|ibadan|enugu|calabar|aba|onitsha|warri|benin city|jos|kaduna|port harcourt)\\b/i.test(q);
 
   const isCryptoQuery = /\b(bitcoin|btc|ethereum|eth|solana|sol|xrp|ripple|bnb|crypto|coin|token|price|trading|defi|nft|blockchain)\b/i.test(q);
   const isWeatherQuery = /\b(weather|forecast|temperature|rain|sunny|cloudy|storm|wind|humidity)\b/i.test(q);
-  const isNewsQuery = /\b(latest|news|recent|breaking|today|yesterday|update|development|happening)\b/i.test(q);
 
   const promises: Promise<void>[] = [];
 
@@ -325,29 +325,34 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
 
   await Promise.allSettled(promises);
 
-  if (contextParts.length === 0) {
-    contextParts.push(`[KNOWLEDGE_FALLBACK]\nNo live retrieval sources returned data. Answer from general knowledge, clearly labeled as such.`);
-    allSources.push({ name: "AI Knowledge", type: "knowledge", fetchedAt: now() });
-  }
-
   return { contextParts, sources: allSources, webResults };
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 4 — GROQ AI REASONING (browser-side, needs VITE_GROQ_KEY)
+// SECTION 4 — GROQ AI REASONING (browser-side fallback)
 // ═══════════════════════════════════════════════════════════════
 
 function buildSystemPrompt(mode: SearchMode): string {
-  const base = `You are SEARCH-POI Engine v2 — an intelligent reasoning search engine.\nYou receive RETRIEVAL CONTEXT from live external sources. Use this context to answer the user's query.\n\nCRITICAL RULES:\n1. Use the RETRIEVAL CONTEXT to answer. If context says 🟢 LIVE DATA, cite it and use it.\n2. NEVER fabricate real-time data. If no live context was retrieved, say "🔴 Live retrieval unavailable: [reason]" and answer from general knowledge.\n3. When you cite live data, include the source name and freshness (e.g., "Live from CoinGecko, just now").\n4. Keep answers SHORT and direct (3-8 sentences unless detail is requested).\n5. Always end with a ⚡ Key Takeaway section (one sentence).\n6. Add 📊 Confidence (High/Medium/Low) based on source quality.\n7. Structure answers with clear headers, bullet points, and bold text.\n8. For POI/location queries, present results as a ranked list with map links.\n9. For price/market data, always show the exact numbers and 24h change.\n10. For news queries, focus on the latest developments.`;
+  return `You are SEARCH-POI Engine v2 — an intelligent reasoning search engine.
+You receive RETRIEVAL CONTEXT from live external sources. Use this context to answer the user's query.
 
-  const modePrompts: Record<string, string> = {
-    deep_research: "\n\nYou are in DEEP RESEARCH mode. Be thorough, academic, and multi-faceted. Minimum 300 words.",
-    code: "\n\nYou are in CODE mode. Provide working code examples with explanations.",
-    academic: "\n\nYou are in ACADEMIC mode. Use scholarly methodology and rigorous analysis.",
-    business: "\n\nYou are in BUSINESS mode. Focus on market intelligence, actionable insights, and strategic recommendations.",
-  };
+CRITICAL ANTI-HALLUCINATION RULES:
+1. ONLY use information from the RETRIEVAL CONTEXT. If it's not in the context, say you don't have verified data.
+2. NEVER fabricate real-time data (prices, dates, statistics). Only cite numbers that appear in the context.
+3. Clearly label each source (e.g., "According to DuckDuckGo...", "Wikipedia states...").
+4. If sources conflict, acknowledge the disagreement.
+5. If context is empty, say: "🔴 Live retrieval unavailable for this query."
+6. End every answer with 📊 Confidence (High/Medium/Low) and ⚡ Key Takeaway.
 
-  return base + (modePrompts[mode] || "");
+RESPONSE FORMAT:
+- Lead with a direct answer
+- Use bullet points for multiple facts
+- Bold important numbers/facts
+- Structure with clear headers
+
+${mode === "deep_research" ? "\n[MODE: DEEP RESEARCH — Be thorough, minimum 200 words.]" : ""}
+${mode === "academic" ? "\n[MODE: ACADEMIC — Use scholarly methodology.]" : ""}
+${mode === "business" ? "\n[MODE: BUSINESS — Focus on actionable insights.]" : ""}`;
 }
 
 async function callGroqStreaming(
@@ -384,7 +389,7 @@ async function callGroqStreaming(
   });
 
   if (res.status === 429) throw new Error("🔴 Rate limit exceeded. Please try again in a moment.");
-  if (res.status === 402) throw new Error("🔴 Groq usage limit reached. Please add credits.");
+  if (res.status === 402) throw new Error("🔴 Groq usage limit reached.");
   if (!res.ok || !res.body) throw new Error(`🔴 Groq API returned ${res.status}`);
 
   const reader = res.body.getReader();
@@ -421,13 +426,25 @@ async function callGroqStreaming(
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SECTION 5 — OFFLINE FALLBACKS
+// SECTION 5 — OFFLINE FALLBACK
 // ═══════════════════════════════════════════════════════════════
 
 async function buildOfflineAnswer(query: string): Promise<string> {
   const pois = await searchPOIsOffline(query, 10);
   if (pois.length === 0) {
-    return `🔴 **Live Retrieval Unavailable**\n\nNo live sources returned results for "${query}".\n\nThis may be because:\n- The Cloudflare search backend is not configured (missing API keys)\n- No matching data found in external sources\n- You are offline\n\n⚡ **Key Takeaways**\n- Check that the Cloudflare Pages Functions are properly configured\n- Try a different search query\n- Ensure you have an internet connection`;
+    return `🔴 **Live Retrieval Unavailable**
+
+No live sources returned results for "${query}".
+
+This may be because:
+- The Cloudflare search backend is not configured (add GROQ_API_KEY as a Cloudflare Pages secret)
+- No matching data found in external sources
+- Network connectivity issue
+
+⚡ **Key Takeaways**
+- Ensure GROQ_API_KEY is set in Cloudflare Pages → Settings → Functions → Environment Variables
+- Try rephrasing your search query
+- Check your internet connection`;
   }
   const top = pois.slice(0, 5);
   const list = top.map((p, i) => `${i + 1}. **${p.name}** (${p.category}) — ${p.city}, ${p.state}. ${p.description ?? ""}`).join("\n");
@@ -448,14 +465,14 @@ async function buildOfflineWebResults(query: string): Promise<WebResult[]> {
 // ═══════════════════════════════════════════════════════════════
 
 export async function webSearch(query: string, limit = 10): Promise<WebResult[]> {
-  // Priority 1: Cloudflare Functions (Firecrawl-backed, rich results)
+  // Priority 1: Cloudflare Functions (DuckDuckGo Lite + Wikipedia server-side)
   const cfResults = await callCloudflareWebSearch(query, limit);
   if (cfResults.length > 0) {
     cacheSearchResult(`web:${query}`, cfResults).catch(() => {});
     return cfResults;
   }
 
-  // Priority 2: Browser-side retrieval (DDG, Wikipedia, Nominatim)
+  // Priority 2: Browser-side retrieval
   try {
     const { webResults } = await retrieveContext(query);
     if (webResults.length > 0) {
@@ -463,13 +480,6 @@ export async function webSearch(query: string, limit = 10): Promise<WebResult[]>
       cacheSearchResult(`web:${query}`, results).catch(() => {});
       return results;
     }
-
-    // Build synthetic results from context
-    const { sources } = await retrieveContext(query);
-    const synthResults: WebResult[] = sources
-      .filter(s => s.url)
-      .map(s => ({ url: s.url!, title: s.name, description: "" }));
-    if (synthResults.length > 0) return synthResults.slice(0, limit);
   } catch { /* fallback */ }
 
   // Priority 3: Cached results
@@ -495,26 +505,22 @@ export async function streamSearch({
 }) {
   const start = Date.now();
 
-  // STEP 1: Try Cloudflare Functions first (best quality — Gemini + Firecrawl context)
-  const cfAnswer = await callCloudflareSearchAI(query, mode);
-  if (cfAnswer) {
-    // Stream the Cloudflare answer character by character for the streaming UI
-    const chunks = cfAnswer.match(/.{1,12}/gs) || [cfAnswer];
-    for (const c of chunks) {
-      onDelta(c);
-      await new Promise((r) => setTimeout(r, 6));
+  // STEP 1: Cloudflare Functions (primary path — DuckDuckGo + Wikipedia + Groq, server-side)
+  try {
+    const cfResult = await callCloudflareSearchAI(query, mode);
+    if (cfResult?.answer) {
+      streamText(cfResult.answer, onDelta);
+      cacheSearchResult(`ai:${query}:${mode}`, cfResult.answer).catch(() => {});
+      onDone();
+      return;
     }
-    cacheSearchResult(`ai:${query}:${mode}`, cfAnswer).catch(() => {});
-    onDone();
-    return;
-  }
+  } catch { /* fall through to browser-side */ }
 
-  // STEP 2: Browser-side retrieval + Groq AI reasoning
+  // STEP 2: Browser-side retrieval + Groq AI reasoning (if VITE_GROQ_KEY available)
   try {
     const { contextParts } = await retrieveContext(query);
 
     if (GROQ_KEY) {
-      // Groq available — use it for AI synthesis
       const fullAnswer = await callGroqStreaming(query, contextParts.join("\n\n"), mode, context, onDelta);
       if (fullAnswer) {
         cacheSearchResult(`ai:${query}:${mode}`, fullAnswer).catch(() => {});
@@ -523,14 +529,10 @@ export async function streamSearch({
       return;
     }
 
-    // STEP 3: No AI key available — return raw retrieved context
+    // STEP 3: No AI key — return raw retrieved context
     if (contextParts.length > 0) {
       const rawAnswer = `## Search Results for "${query}"\n\n${contextParts.join("\n\n---\n\n")}\n\n---\n\n📊 **Confidence: Medium** (retrieved from live sources, no AI synthesis)\n⚡ **Key Takeaway**: Results retrieved from ${contextParts.length} live source(s).`;
-      const chunks = rawAnswer.match(/.{1,12}/gs) || [rawAnswer];
-      for (const c of chunks) {
-        onDelta(c);
-        await new Promise((r) => setTimeout(r, 6));
-      }
+      streamText(rawAnswer, onDelta);
       onDone();
       return;
     }
@@ -541,22 +543,14 @@ export async function streamSearch({
   // STEP 4: Try cached answer
   const cached = await getCachedSearch(`ai:${query}:${mode}`);
   if (cached) {
-    const chunks = (cached as string).match(/.{1,12}/gs) || [cached];
-    for (const c of chunks) {
-      onDelta(c);
-      await new Promise((r) => setTimeout(r, 6));
-    }
+    streamText(cached as string, onDelta);
     onDone();
     return;
   }
 
   // STEP 5: Offline POI fallback (absolute last resort)
   const offlineAnswer = await buildOfflineAnswer(query);
-  const chunks = offlineAnswer.match(/.{1,12}/gs) || [offlineAnswer];
-  for (const c of chunks) {
-    onDelta(c);
-    await new Promise((r) => setTimeout(r, 8));
-  }
+  streamText(offlineAnswer, onDelta);
   onDone();
 }
 
@@ -610,7 +604,6 @@ export async function summarizeUrl(url: string): Promise<string> {
 }
 
 export async function imageSearch(query: string, _limit = 20): Promise<ImageResult[]> {
-  // Try Cloudflare Function
   try {
     const res = await fetch("/api/image-search", {
       method: "POST",
