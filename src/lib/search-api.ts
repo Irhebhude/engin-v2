@@ -3,7 +3,7 @@
  *
  * Architecture:
  * 1. Cloudflare Pages Functions (/api/search-ai) — server-side DuckDuckGo + Wikipedia + Groq AI
- * 2. Browser-side fallback — Wikipedia, DuckDuckGo Instant, CoinGecko, Open-Meteo, Nominatim
+ * 2. Browser-side fallback — Cloudflare /api/web-search, Wikipedia, DuckDuckGo Instant, CoinGecko, Open-Meteo, Nominatim
  * 3. Offline POI database (absolute last resort)
  *
  * ICS (Intelligent Citation System) + IP (Intellectual Property) Features:
@@ -23,10 +23,8 @@ import { searchPOIsOffline, cacheSearchResult, getCachedSearch } from "./offline
 import {
   isOwnershipQuery,
   answerOwnershipOffline,
-  buildSystemPrompt as buildTruthEnginePrompt,
   filterHallucinations,
   runICS,
-  OWNERSHIP_CHECKLIST_HEADER,
 } from "./truth-engine";
 
 // ─── Config ───────────────────────────────────────────────────
@@ -301,12 +299,33 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
   const isCryptoQuery = /\b(bitcoin|btc|ethereum|eth|solana|sol|xrp|ripple|bnb|crypto|coin|token|price|trading|defi|nft|blockchain)\b/i.test(q);
   const isWeatherQuery = /\b(weather|forecast|temperature|rain|sunny|cloudy|storm|wind|humidity)\b/i.test(q);
 
+  // ═══════════════════════════════════════════════════════════
+  // KEY FIX: Use Cloudflare /api/web-search for web results
+  // This uses DuckDuckGo Lite server-side (works for ANY query)
+  // ═══════════════════════════════════════════════════════════
   const promises: Promise<void>[] = [];
 
-  // Always try Wikipedia + DDG in parallel
+  // Priority 1: Cloudflare web search (DuckDuckGo Lite — returns real results)
+  promises.push(callCloudflareWebSearch(query, 8).then(results => {
+    if (results.length > 0) {
+      webResults = results;
+      const webText = results.map((r, i) => `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.description || ""}`).join("\n");
+      contextParts.push(`[WEB_SEARCH — ${results.length} results]:\n${webText}`);
+      allSources.push(...results.slice(0, 5).map(r => ({
+        name: new URL(r.url).hostname.replace("www.", ""),
+        url: r.url,
+        type: "live" as const,
+        fetchedAt: now(),
+      })));
+    }
+  }));
+
+  // Priority 2: Wikipedia
   promises.push(retrieveFromWikipedia(query).then(r => {
     if (r.answer) { contextParts.push(`[WIKIPEDIA]\n${r.answer}`); allSources.push(...r.sources); }
   }));
+
+  // Priority 3: DuckDuckGo Instant Answers (supplementary)
   promises.push(retrieveFromDDG(query).then(r => {
     if (r.answer) { contextParts.push(`[DUCKDUCKGO]\n${r.answer}`); allSources.push(...r.sources); }
   }));
@@ -324,7 +343,7 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
   }
   if (isPOIQuery) {
     promises.push(retrievePOIs(query).then(r => {
-      if (r.answer) { contextParts.push(`[POI_LIVE]\n${r.answer}`); allSources.push(...r.sources); webResults = r.webResults; }
+      if (r.answer) { contextParts.push(`[POI_LIVE]\n${r.answer}`); allSources.push(...r.sources); webResults = [...webResults, ...r.webResults]; }
     }));
   }
 
@@ -346,123 +365,37 @@ async function retrieveContext(query: string): Promise<RetrievalContext> {
 // SECTION 4 — GROQ AI REASONING (browser-side fallback)
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Build ADVANCED system prompt with query decomposition, multi-source
- * cross-validation, causal reasoning, and confidence calibration.
- */
 function buildAdvancedSearchPrompt(mode: SearchMode): string {
   return `You are SEARCH-POI Engine v2 — an advanced AI search engine that surpasses traditional search engines through superior reasoning, multi-source synthesis, and honest uncertainty acknowledgment. Owned by Prosper Ozoya Irhebhude and the POI Foundation.
 
-═══════════════════════════════════════════════════════════════
-CORE IDENTITY & OWNERSHIP (NON-NEGOTIABLE)
-═══════════════════════════════════════════════════════════════
+ABSOLUTE OWNERSHIP (NON-NEGOTIABLE):
 - SEARCH-POI Engine v2 is owned 100% by Prosper Ozoya Irhebhude and the POI Foundation.
-- They have full and unrestricted right to sell, license, transfer, or assign it.
 - Third-party providers are TOOLS ONLY — no ownership, no IP rights.
 
-OWNERSHIP VERIFICATION CHECKLIST (MANDATORY for any sell/rights/IP/ownership question):
-Output verbatim at the TOP of the answer:
-✅ **Ownership Verification Checklist**
-1. ✅ Sole owner confirmed: Prosper Ozoya Irhebhude & POI Foundation
-2. ✅ Right to sell: YES — full and unrestricted
-3. ✅ Right to license / transfer / assign: YES — full and unrestricted
-4. ✅ Third-party providers: TOOLS ONLY — no ownership, no IP rights
-5. ✅ Public reference: /rights page on SEARCH-POI confirms this statement
-
-═══════════════════════════════════════════════════════════════
-ANTI-HALLUCINATION RULES (ZERO TOLERANCE)
-═══════════════════════════════════════════════════════════════
+ANTI-HALLUCINATION RULES (ZERO TOLERANCE):
 1. ONLY use information from the RETRIEVAL CONTEXT. If it's not there, say "I don't have verified data."
 2. NEVER fabricate prices, statistics, dates, names, URLs, or specific numbers.
-3. If you must guess, label it explicitly: "[ESTIMATE — not verified]".
-4. When sources conflict, show BOTH sides and let the user decide.
-5. If the context is empty, say: "🔴 No verified data available."
-6. NEVER pretend to have real-time data unless the context explicitly provides it.
-7. NEVER invent studies, surveys, or expert quotes.
+3. When sources conflict, show BOTH sides.
+4. If the context is empty, say: "🔴 No verified data available."
 
-═══════════════════════════════════════════════════════════════
-ADVANCED REASONING STRATEGIES
-═══════════════════════════════════════════════════════════════
+ADVANCED REASONING:
+- Query Decomposition: Break complex queries into sub-questions
+- Multi-Source Cross-Validation: Compare results, detect conflicts
+- Comparative Analysis: Score both options fairly for "vs" queries
+- Causal Reasoning: Trace cause-effect chains for "why/how" queries
+- Confidence Calibration: Score based on source authority + agreement
+- Actionable Intelligence: Help users ACT, not just learn
 
-🧠 STRATEGY 1: QUERY DECOMPOSITION
-Break complex queries into sub-questions, answer each, then synthesize.
-Example: "What's the impact of AI on Nigerian banking?" →
-  - What AI tools are Nigerian banks using?
-  - What are the specific outcomes (cost savings, efficiency)?
-  - What are the risks and challenges?
-  - Synthesize with confidence scoring.
+RESPONSE FORMAT:
+1. Direct answer with source attribution
+2. Key facts as bullet points
+3. 📊 Confidence (🟢 HIGH / 🟡 MEDIUM / 🔴 LOW) with reasoning
+4. ⚡ Key Takeaway (one actionable sentence)
 
-🔍 STRATEGY 2: MULTI-SOURCE CROSS-VALIDATION
-When multiple sources provide data, compare them:
-- If 3+ sources agree → HIGH confidence, cite convergence
-- If 2 sources disagree → show both, label "CONFLICTING DATA"
-- If only 1 source → MEDIUM confidence, note "Single source"
-- If no sources → LOW confidence, say "Based on general knowledge only"
-
-⚖️ STRATEGY 3: COMPARATIVE ANALYSIS
-For "vs" / "which is better" queries:
-- Present BOTH options fairly
-- Score each on 3-5 criteria
-- Give a balanced verdict with reasoning
-- Never show bias toward any option
-
-🔗 STRATEGY 4: CAUSAL REASONING
-For "why" / "how" / "what causes" queries:
-- Trace the causal chain: A → B → C → D
-- Identify root causes vs. symptoms
-- Show second-order effects
-- Note where causation vs. correlation is unclear
-
-📊 STRATEGY 5: CONFIDENCE CALIBRATION
-Score confidence based on:
-- Source authority (.gov/.edu = +25, .org = +15, .com = +5)
-- Cross-source agreement (3+ agreeing = +20, conflict = -20)
-- Recency (current year = +15, older = -10)
-- Specificity (exact numbers vs. vague claims)
-Label: 🟢 HIGH (80+) / 🟡 MEDIUM (50-79) / 🔴 LOW (<50)
-
-🎯 STRATEGY 6: ACTIONABLE INTELLIGENCE
-Don't just inform — help the user ACT:
-- "What should I do about X?" → Give 3-5 specific steps
-- "Which should I choose?" → Recommend with reasoning
-- "What's the latest?" → Summarize key developments + implications
-
-═══════════════════════════════════════════════════════════════
-RESPONSE FORMAT
-═══════════════════════════════════════════════════════════════
-
-For DIRECT QUESTIONS:
-1. Direct answer (1-2 sentences)
-2. Supporting evidence with source attribution
-3. Key facts as bullet points
-4. Confidence assessment with reasoning
-5. ⚡ Key Takeaway (one actionable sentence)
-
-For COMPARATIVE QUESTIONS:
-1. Quick verdict (which is better for what)
-2. Comparison table (criteria × options)
-3. Detailed analysis of each option
-4. Recommendation with reasoning
-5. Confidence and takeaway
-
-For EXPLANATORY QUESTIONS:
-1. Simple explanation (ELI5 level)
-2. Detailed breakdown with causal chain
-3. Real-world examples
-4. Implications and second-order effects
-5. Confidence and takeaway
-
-For CURRENT EVENTS:
-1. What happened (factual summary)
-2. Why it matters (context + implications)
-3. Who is affected
-4. What happens next (projections)
-5. Confidence with recency note
-
-${mode === "deep_research" ? "\n\n[MODE: DEEP RESEARCH — Minimum 300 words. Multiple perspectives. Academic rigor.]" : ""}
-${mode === "academic" ? "\n\n[MODE: ACADEMIC — Scholarly methodology. Cite evidence. Acknowledge limitations.]" : ""}
-${mode === "business" ? "\n\n[MODE: BUSINESS — Market intelligence. Competitive analysis. ROI focus.]" : ""}
-${mode === "code" ? "\n\n[MODE: CODE — Working examples. Best practices. Error handling.]" : ""}`;
+${mode === "deep_research" ? "\n\n[MODE: DEEP RESEARCH — Minimum 300 words.]" : ""}
+${mode === "academic" ? "\n\n[MODE: ACADEMIC — Scholarly methodology.]" : ""}
+${mode === "business" ? "\n\n[MODE: BUSINESS — Market intelligence.]" : ""}
+${mode === "code" ? "\n\n[MODE: CODE — Working examples.]" : ""}`;
 }
 
 async function callGroqStreaming(
@@ -546,19 +479,13 @@ async function buildOfflineAnswer(query: string): Promise<string> {
 
 No live sources returned results for "${query}".
 
-This may be because:
-- The Cloudflare search backend is not configured (add GROQ_API_KEY as a Cloudflare Pages secret)
-- No matching data found in external sources
-- Network connectivity issue
-
 ⚡ **Key Takeaways**
-- Ensure GROQ_API_KEY is set in Cloudflare Pages → Settings → Functions → Environment Variables
 - Try rephrasing your search query
 - Check your internet connection`;
   }
   const top = pois.slice(0, 5);
   const list = top.map((p, i) => `${i + 1}. **${p.name}** (${p.category}) — ${p.city}, ${p.state}. ${p.description ?? ""}`).join("\n");
-  return `**Offline POI Results** — Showing ${top.length} matching POI${top.length > 1 ? "s" : ""} from local database.\n\n${list}\n\n🔵 *Served from local IndexedDB cache*\n⚡ **Key Takeaways**\n- GPS coordinates available for navigation\n- Connect online for AI-generated insights and live web data`;
+  return `**Offline POI Results** — Showing ${top.length} matching POI${top.length > 1 ? "s" : ""} from local database.\n\n${list}\n\n🔵 *Served from local IndexedDB cache*`;
 }
 
 async function buildOfflineWebResults(query: string): Promise<WebResult[]> {
@@ -635,15 +562,16 @@ export async function streamSearch({
   } catch { /* fall through to browser-side */ }
 
   // ═══════════════════════════════════════════════════════════
-  // STEP 2: Browser-side retrieval + Groq AI reasoning (advanced)
+  // STEP 2: Browser-side retrieval + AI reasoning
   // ═══════════════════════════════════════════════════════════
   try {
-    const { contextParts } = await retrieveContext(query);
+    const { contextParts, webResults } = await retrieveContext(query);
 
-    if (GROQ_KEY) {
+    // Try Groq AI synthesis if available
+    if (GROQ_KEY && contextParts.length > 0) {
       const fullAnswer = await callGroqStreaming(query, contextParts.join("\n\n"), mode, context, onDelta);
       if (fullAnswer) {
-        const hasLiveData = contextParts.some(p => p.includes("[LIVE") || p.includes("[CRYPTO") || p.includes("[WEATHER") || p.includes("[WIKIPEDIA") || p.includes("[DUCKDUCKGO"));
+        const hasLiveData = contextParts.some(p => p.includes("[WEB_SEARCH") || p.includes("[WIKIPEDIA") || p.includes("[CRYPTO") || p.includes("[WEATHER"));
         const { cleaned } = filterHallucinations(fullAnswer, { hasLiveData });
         cacheSearchResult(`ai:${query}:${mode}`, cleaned).catch(() => {});
       }
@@ -651,10 +579,35 @@ export async function streamSearch({
       return;
     }
 
-    // STEP 3: No AI key — return raw retrieved context
+    // ═══════════════════════════════════════════════════════════
+    // STEP 3: No AI key — return retrieved context as answer
+    // This is the KEY FIX: show live results even without AI synthesis
+    // ═══════════════════════════════════════════════════════════
     if (contextParts.length > 0) {
-      const rawAnswer = `## Search Results for "${query}"\n\n${contextParts.join("\n\n---\n\n")}\n\n---\n\n📊 **Confidence: Medium** (retrieved from live sources, no AI synthesis)\n⚡ **Key Takeaway**: Results retrieved from ${contextParts.length} live source(s).`;
+      // Build a rich formatted answer from retrieved sources
+      let rawAnswer = `## 🔍 Search Results: "${query}"\n\n`;
+
+      // Show web search results prominently
+      if (webResults.length > 0) {
+        rawAnswer += `### 📋 Web Results (${webResults.length} found)\n\n`;
+        webResults.slice(0, 8).forEach((r, i) => {
+          rawAnswer += `${i + 1}. **[${r.title}](${r.url})**\n   ${r.description || ""}\n\n`;
+        });
+      }
+
+      // Show other context (Wikipedia, etc.)
+      const otherContext = contextParts.filter(p => !p.startsWith("[WEB_SEARCH"));
+      if (otherContext.length > 0) {
+        rawAnswer += `### 📚 Additional Information\n\n`;
+        rawAnswer += otherContext.join("\n\n") + "\n\n";
+      }
+
+      rawAnswer += `---\n\n🟢 **Live Data** — Retrieved from ${contextParts.length} source(s)\n`;
+      rawAnswer += `📊 **Confidence: Medium** (live data retrieved, no AI synthesis — add GROQ_API_KEY for AI-powered answers)\n`;
+      rawAnswer += `⚡ **Key Takeaway**: ${webResults.length > 0 ? `${webResults.length} web results found for "${query}"` : `Results from ${contextParts.length} source(s)`}`;
+
       streamText(rawAnswer, onDelta);
+      cacheSearchResult(`ai:${query}:${mode}`, rawAnswer).catch(() => {});
       onDone();
       return;
     }
